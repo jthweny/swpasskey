@@ -167,6 +167,53 @@ inferable**, and **does any accepted model's MDS entry describe a trust anchor o
 attestation type that a non-vendor can satisfy**. Secondary: does `tac1_enabled`
 depend on anything other than the credential (identity check, key count, time)?
 
+## Digest of prior research (do not re-derive these)
+
+Facts established by earlier iterations, each with its source. Treat them as
+starting points; build on them, do not repeat the search that produced them.
+
+* OpenAI's bundle with Yubico is **YubiKey C Nano + C NFC**; Support told a user
+  "keys supplied through the OpenAI/Yubico bundle are supported for Daybreak" —
+  https://community.openai.com/t/daybreak-does-not-recognize-trustkey-t110-physical-fido2-keys-as-hardware-security-keys/1401917
+* OpenAI publishes only a **denylist** (TrustKey T110/T120) and calls keys
+  "approved" without listing them; public messaging claims "any other
+  FIDO-compliant security key" works, which the measurements contradict —
+  https://help.openai.com/en/articles/20001259-troubleshooting-openai-daybreak ,
+  https://openai.com/index/advanced-account-security
+* TrustKey T110/T120 were confirmed compatible on 24 Sep and ineligible on 1 Oct:
+  **the accepted set changes over time** — same thread.
+* An **IDmelon Authenticator credential** (phone app, real MDS entry, basic_full,
+  Vancosys root) is admitted and labelled from the MDS, and the hardware flag is
+  still false (measured, row 20).
+* Yubico rotated its attestation PKI in 2025: fw 5.7.4+ chains leaf → `Yubico FIDO
+  Attestation A 1` → `Yubico Attestation Intermediate A 1` → `Yubico Attestation
+  Root 1`; pre-5.7.4 uses `Yubico U2F Root CA Serial 457200631` —
+  https://developers.yubico.com/U2F/Attestation_and_Metadata
+* The certificate's `id-fido-gen-ce-aaguid` extension is **cross-checked** against
+  authData (row 23 = 400 on mismatch).
+* `attestationCertificateKeyIdentifiers` is a parallel attribution namespace: hex
+  SHA-1 over the **bare subjectPublicKey BIT STRING**, and `fido-u2f` registrations
+  carry an all-zero AAGUID, so those entries are addressable only by certificate
+  key id — https://fidoalliance.org/specs/mds/fido-metadata-statement-v3.1-ps-20250521.html
+* FIDO certification economics: Associate membership **$3,250** (≤100 employees),
+  functional certification **$6,000** member / $9,000 non-member, **L1 open to
+  software** (document review, no lab), **L2 requires a hardware AROE** —
+  https://fidoalliance.org/members/become-a-member , https://fidoalliance.org/fido-certification-fees ,
+  https://fidoalliance.org/security-certification-authenticator-security-levels
+* Microsoft's equivalent list is a versioned MDS snapshot refreshed monthly —
+  https://learn.microsoft.com/en-us/entra/identity/authentication/concept-fido2-hardware-vendor
+* Users report the verdict updating **days later** with no action ("delayed/backend
+  state update rather than the verification being permanently rejected") —
+  https://community.openai.com/t/trusted-access-for-cyber-issue/1399570?page=2
+* Daybreak eligibility behaves as a conjunction — plan, AAS, hardware key, identity
+  check — with a `403 cyber_verification_precheck_failed` before Persona —
+  https://help.openai.com/en/articles/20001258-openai-daybreak-trusted-access-for-cyber-overview
+* Yubico enterprise attestation is gated by an **RP allowlist on the key itself**
+  (the `1ac7…` feature), so EA cannot be obtained unilaterally.
+* Anchoring tools to check claims against: `tools/mds-anchor-audit.py` (end-entity
+  and anchorless entries), `tools/browser-bridge/tpm_statement.py` (spec-shaped TPM
+  statement), `tools/probe.sh` (arm one attestation shape), `tools/flag-poller.mjs`.
+
 ## Open avenues worth attacking
 
 1. **MDS structure quirks.** Entries whose `attestationRootCertificates` are absent
