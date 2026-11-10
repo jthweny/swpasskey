@@ -197,6 +197,12 @@ probed with every input we control:
 | same, but signature made by a different key than the leaf (forged statement) | **200** | false |
 | leaf + the **real** Yubico attestation root chain appended (x5c=4) | 200 | false |
 | leaf whose issuer DN is exactly `CN=Yubico FIDO Attestation B 1` | 200 | false |
+| **Google Titan v2** AAGUID with the same self-signed statement | 200 | false |
+
+The Titan row matters: a different vendor's MDS entry resolves just as well
+(`authenticator_name: "Google Titan Security Key v2"`, `is_security_key: true`) and
+still lands on `false`. So the flag is vendor-agnostic — it tracks attestation
+validity, not brand — which also means no choice of AAGUID turns it on.
 
 Two things fall out. Their enrolment **does not verify the `attStmt` signature** —
 a statement signed with the wrong key was accepted and issued a credential — so
