@@ -127,6 +127,7 @@ macOS (CTAP2 daemon + browser bridge):
 | 24 | `4599062e` **YubiKey 5 Series (Enterprise Profile)** with the certificate and authData agreeing | 200, resolved by name | false |
 | 25 | `clientExtensionResults.enterpriseAttestation: true` asserted by the shim (that JSON rides to the server verbatim) | 200 | false |
 | 26 | AAGUID `0f083f18` **Security Key C NFC 5.8** — the retail $29 model users report working | 200, "Security Key Series with NFC (Consumer Profile)" | false |
+| 27 | **global-anchor-pool probe**: AAGUID `5df66f62` Securitag (refused on sight in row 10) but `x5c` ending in the genuine Yubico A-1 → Intermediate A-1 → Root 1 | **200**, resolved as "Securitag Assembly Group FIDO Authenticator NFC" | false |
 
 Two derived facts worth carrying:
 
@@ -195,6 +196,18 @@ so admission tracks currently marketed models while the evidence requirement doe
 FIDO's enterprise-attestation test PKI is not in the MDS, so its published private key
 buys nothing. TrustKey's real keys carry genuine chains and are still labelled
 "Passkey", so OpenAI applies an active deny component on top of classification.
+
+Row 27 answers the per-AAGUID vs global question: the anchor pool is **global**. A
+model that is refused when certified with its own self-signed leaf is admitted when the
+chain merely *ends in* another vendor's published anchor, and it is named from its own
+MDS entry. So anchors are matched as a set, across entries.
+
+Combined with row 3 (the `attStmt` signature is not verified) and every `hw: false`, the
+remaining explanation for the hardware flag is the *other* half of the metadata:
+**`attestationCertificateKeyIdentifiers`** — a SHA-1 over the leaf's public key, so it
+identifies the *key*, not the chain. A certificate whose SPKI hashes to a registered
+value is the only thing that can flip the flag, and no amount of chain assembly reaches
+it. That is now the single conclusion, reached from four independent directions.
 
 ## Known dead ends — do not re-propose these
 

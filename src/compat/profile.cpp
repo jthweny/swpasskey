@@ -26,6 +26,11 @@ constexpr Aaguid kYubikey5cNfc574{0xd7, 0x78, 0x1e, 0x5d, 0xe3, 0x53, 0x46, 0xaa
 constexpr Aaguid kYubikey5Enterprise{0x45, 0x99, 0x06, 0x2e, 0x69, 0x26, 0x4f, 0xe7,
                                      0x95, 0x66, 0x9e, 0x8f, 0xb1, 0xae, 0xda, 0xa0};
 
+// Securitag Assembly Group FIDO Authenticator NFC: a certified hardware model that
+// OpenAI refuses at admission (row 10). Kept for the anchor-pool probe.
+constexpr Aaguid kSecuritagSag{0x5d, 0xf6, 0x6f, 0x62, 0x5b, 0x47, 0x43, 0xd3,
+                               0xaa, 0x1d, 0xa6, 0xe3, 0x1c, 0x8d, 0xbe, 0xb5};
+
 constexpr Aaguid kGoogleTitanV2{0x42, 0xb4, 0xfb, 0x4a, 0x28, 0x66, 0x43, 0xb2,
                                 0x9b, 0xf7, 0x6c, 0x66, 0x69, 0xc2, 0xe5, 0xd3};
 
@@ -149,6 +154,25 @@ std::vector<CompatProfile> make_profiles() {
     p.att_c = "SE";
     p.note = "Enterprise-profile entry (4599062e). Enterprise attestation is gated by "
              "an RP allowlist on the key itself, so this tests the gate, not the key.";
+    v.push_back(std::move(p));
+  }
+  {
+    CompatProfile p;
+    p.id = "securitag-sag";
+    p.name = "Securitag SAG FIDO";
+    p.aaguid = kSecuritagSag;
+    p.vid = 0x1050;
+    p.pid = 0x0407;
+    p.bcd_device = 0x0100;
+    p.manufacturer = "Securitag Assembly Group";
+    p.product = "SAG FIDO";
+    p.serial = SerialStrategy::decimal8;
+    p.att_cn = "SAG FIDO";
+    p.att_ou = "Authenticator Attestation";
+    p.att_o = "Securitag Assembly Group";
+    p.att_c = "TW";
+    p.note = "Refused at admission (row 10). Used for the anchor-pool probe: its own "
+             "MDS entry anchors on a single end-entity certificate.";
     v.push_back(std::move(p));
   }
   {
