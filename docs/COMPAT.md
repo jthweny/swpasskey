@@ -187,6 +187,23 @@ Passkey / Apple Passwords / Google Password Manager
   isNonExportableHardwareKey: false
 ```
 
+**A fabricated chain does not move it.** Built a two-certificate chain — leaf
+`CN=YubiKey 5C NFC` issued by a self-made `CN=Yubico Attestation Root CA`
+(`openssl verify` says OK) — and loaded it through `SWPASSKEY_ATTEST_CHAIN`. The
+bridge then sent `x5c=2` and the enrolment succeeded again, but the new credential
+still reported `is_non_exportable_hardware_key: false`:
+
+```
+[bridge] create rp=openai.com fmt=packed aaguid=f4ce5fc0-… x5c=2 flags=0xc5
+GET /passkeys -> {name: YubiKey 5 Series with NFC (Consumer Profile),
+                  is_security_key: true, is_non_exportable_hardware_key: false}
+```
+
+So the test is not "is the statement chained" but "does it chain to the
+attestation material published for that AAGUID" — the MDS root certificates and
+`attestationCertificateKeyIdentifiers`. Both are sealed by Yubico's attestation
+private key: no chain we can assemble is anchored to them.
+
 The Continue button stays disabled while no method reports
 `isNonExportableHardwareKey: true`, and `/backend-api/cyber_verification/status`
 answers `{"tac1_enabled": false}` for the same reason. That flag is the output of
