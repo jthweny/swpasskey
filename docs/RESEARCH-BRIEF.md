@@ -55,6 +55,9 @@ macOS (CTAP2 daemon + browser bridge):
 | 7 | AAGUID `42b4fb4a-…` (Google Titan v2) | 200 | false |
 | 8 | no extension data at all (`flags=0x45`, no ED bit) | 200 | false |
 | 9 | full Yubico-shaped leaf: AAGUID ext + chain + CA:FALSE/KU/SKI/AKI | 200 | false |
+| 10 | AAGUID `5df66f62-…` (Securitag, hardware, **anchor is a leaf cert**) + that exact public anchor as `x5c`, placeholder sig | **400 `passkey_verification_failed`** | n/a |
+| 11 | AAGUID `5df66f62-…` + our own self-signed cert (isolates AAGUID from cert) | **400** | n/a |
+| 12 | Yubico AAGUID, `fmt: "none"`, empty attStmt (no attestation at all) | 200 | false |
 
 Two derived facts worth carrying:
 
@@ -63,12 +66,22 @@ Two derived facts worth carrying:
 * The flag is **vendor-agnostic** (rows 6, 7) and independent of issuer naming,
   chain shape, cert extensions and extension data.
 
+Rows 10–11 matter: a *certified, hardware-protected* MDS model whose trust anchor is
+an end-entity certificate is **refused outright** when enrolled (400), and refused on
+the AAGUID alone even with a different certificate. So enrolment has a model gate
+separate from the MDS, and the end-entity-anchor class cannot be reached through it.
+Row 12: enrolment accepts a statement with no attestation at all for an accepted
+model, and the hardware flag is still false — so the flag is not evidence-of-any-
+attestation, it is evidence-of-a-*valid* one (or a separate internal list).
+
 ## Known dead ends — do not re-propose these
 
 * Self-signed / self-chained / real-roots-appended / issuer-name-spoofed chains.
 * Choosing a "better" AAGUID among MDS-listed ones.
 * Faking the attestation signature.
 * Appending genuine vendor CA certificates (we have Yubico's).
+* Enrolling under MDS models outside the accepted set (400), including the 34
+  end-entity-anchored ones — the model gate rejects them before attestation matters.
 * Anything requiring a vendor's attestation private key — unless you find a
   *specific, sourced* exception (e.g. a vendor that issues attestation leaves to
   customers, a dev kit whose attestation key is customer-generated, a public
