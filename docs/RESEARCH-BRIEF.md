@@ -235,6 +235,17 @@ devices. Replaying a real leaf (row 28's remaining variant) would mean presentin
 specific physical key's identity as one's own, and the material for it is not obtainable
 from public sources in any case.
 
+### Correction to rows 27-28
+
+The hardware flag is **path validation of the leaf certificate to an MDS anchor**, not
+the `attestationCertificateKeyIdentifiers` hash. Evidence: the accepted Yubico entries
+carry no identifiers at all (136 MDS entries do; none of the accepted AAGUIDs; none is
+identifier-only), so identifiers cannot be the test for the model we enrol with.
+Identifiers are a second attribution path used alongside anchors, never instead of
+them. Rows 27 and 28 remain valid as measurements — the pool is global, and no
+published certificate is a registered leaf — but the mechanism they were read as
+supporting has changed.
+
 ## Known dead ends — do not re-propose these
 
 * Self-signed / self-chained / real-roots-appended / issuer-name-spoofed chains.

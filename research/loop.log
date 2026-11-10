@@ -247,3 +247,223 @@
   -> research/findings/20261110-101542-the-daybreak-doc-is-the-only-published-artefact-that-names-m.md
 [11/80] **Batch-leaf replay as the primary path.** Because leaves are batch-scoped (≥100k devices share one cert) and `attStmt.sig` is unchecked, the missing input is one *public certificate*, not a private key. Source candidates: GitHub issues/StackOverflow pastes of `attestationObject`, passkey-debugger exports, `python-fido2`/`py_webauthn` issue threads, and any YubiKey owner. Collect 3–5 independent `f4ce5fc0` leaves and treat them as a corpus.
 [1/60] **Batch-leaf replay as the primary path.** Because leaves are batch-scoped (≥100k devices share one cert) and `attStmt.sig` is unchecked, the missing input is one *public certificate*, not a private key. Source candidates: GitHub issues/StackOverflow pastes of `attestationObject`, passkey-debugger exports, `python-fido2`/`py_webauthn` issue threads, and any YubiKey owner. Collect 3–5 independent `f4ce5fc0` leaves and treat them as a corpus.
+  -> research/findings/20261110-103537--batch-leaf-replay-as-the-primary-path-because-leaves-are-ba.md
+  sources cited: 14
+  + queued: **Chase the five registered 5Ci keys, not the unregistered leaves.** The identifiers in Yu
+  + queued: **Invert the model: enumerate non-empty key-ID lists first, then check admission against t
+  + queued: **Enterprise Attestation ZIPs as a lawful source of vendor-issued certs.** SecureAuth docu
+  + queued: **Model-level vs AAGUID-level diffusion.** The 5C NFC now spans at least six AAGUIDs acros
+  + queued: **Diff BLOB 281 vs current for accepted AAGUIDs** to test reclassification over time, and 
+[2/60] **Metadata staleness**: enumerate AAGUIDs whose admission-relevant fields (description, anchors, certification status) changed across recent MDS blobs, and test whether OpenAI's verdict tracks the current blob or an older snapshot. Cloudflare needed BLOB 281 for 5.7.x chains.
+  -> research/findings/20261110-103751--metadata-staleness-enumerate-aaguids-whose-admission-releva.md
+  sources cited: 17
+  + queued: **`anonca` / `none` attestation types**: MDS now supports non-chain attestation types; gre
+  + queued: **Credential-manager listings**: the 2026-09-29 MDS change lets password managers register
+  + queued: **The only mutable layer is OpenAI's own**: MDS is additive and cannot be un-published, so
+  + queued: **Anchor-class map**: run experiment 2(d) across Feitian / HID / G+D / Infineon / NXP / To
+  + queued: **`attca` + enterprise-profile entries**: test `41e39911` / `ab7d1767` with a statement ca
+  + queued: **Microsoft's monthly MDS snapshot list** as a differential oracle: their "supported hardw
+[3/60] **Find a published `is_non_exportable_hardware_key: true` observation** (screenshot, log line, community post) that names or shows the credential's attestation certificate, so the tested value can be confirmed as the identifier hash rather than inferred.
+  -> research/findings/20261110-104026--find-a-published-is-non-exportable-hardware-key-true-observ.md
+  sources cited: 15
+  + queued: Read the truncated criteria list in the TrustKey follow-up thread in full — support report
+  + queued: IDmelon is now HID-owned and markets "turn existing identifiers into enterprise-grade FIDO
+  + queued: HAR dumps attached to `openai/codex` auth issues (#50489, #54998) are the likeliest place 
+  + queued: Front-end bundle version of the passkey page may pin a metadata snapshot package name/vers
+  + queued: The `refresh_status` object couples Persona state, AAS and passkey counts; a credential-si
+  + queued: No public artifact pairs any credential with a certificate; treat every "it works" report 
+[4/60] **Does any software credential ever flip to true** in community reports, or only genuine devices? Separate the delayed-update reports by credential type.
+  -> research/findings/20261110-104117--does-any-software-credential-ever-flip-to-true-in-community.md
+  sources cited: 2
+  + queued: **The corpus question can only be answered by searching for positives, not by reading more
+  + queued: **Prefix the TrustKey flip with a timestamp probe.** Their deny component was added betwee
+  + queued: **Check whether `attestationCertificateKeyIdentifiers` is ever populated without a hardwar
+  + queued: **MDS blob history is the untapped dataset.** No tool here diffs blobs; a two-vintage diff
+[5/60] `qualifying_count` oracle: is the bearer token readable from the page (localStorage/session), so `refresh_status` can be polled directly and compared against per-credential flags?
+  -> research/findings/20261110-104145--qualifying-count-oracle-is-the-bearer-token-readable-from-t.md
+  sources cited: 2
+  + queued: The sentinel route: if `refresh_status` needs `openai-sentinel-chat-requirements-token`, h
+  + queued: Look for a *second* server-side read of the same classifier (`/backend-api/cyber_verificat
+  + queued: Freshness hypothesis for the day-later flips: `oai-device-id` / client-build headers may o
+  + queued: Run the poller against a **second, free account enrolling a genuinely qualifying key** (Se
+[6/60] **`qualifying_count` is an oracle the project is not using.** It reports counts directly, before any UI or Daybreak step, and appears in a public thread. Instrument every enrolment with it instead of relying on the passkeys array alone.
+  -> research/findings/20261110-104212--qualifying-count-is-an-oracle-the-project-is-not-using-it-r.md
+  sources cited: 6
+  + queued: **Sample the flag at high frequency immediately after enrolment** (every 2 s for 5 min) to
+  + queued: **Sweep withdrawn/denied MDS entries specifically.** The denylist is documented (TrustKey 
+  + queued: **Treat the two-method conjunction as the real gate.** `qualifying_count` may count *metho
+  + queued: **Vendor verification pages as a leaf-certificate corpus** (Token2 issues per-unit certs; 
+  + queued: **Read `/backend-api/cyber_verification/*` response bodies for field names we haven't seen
+[7/60] **Model-gate enumeration via MDS mirror.** The Token2 MDS explorer exposes per-AAGUID `attestationTypes`, `keyProtection`, and anchor shapes, so the accepted set can be brute-forced cheaply by enrolling MDS entries and recording 200 vs 400 — the 400/200 matrix is the actual allowlist, and it is inferable rather than published.
+  -> research/findings/20261110-104236--model-gate-enumeration-via-mds-mirror-the-token2-mds-explor.md
+  + queued: **`is_non_device_bound` as an unexplored, already-true flag.** It is `true` for a software
+  + queued: **Enrol a `keyProtection: ["software"]`-only MDS entry on sight.** If a software-protectio
+  + queued: **The two SHA-1 encodings of `attestationCertificateKeyIdentifiers`.** MDS defines it over
+  + queued: **Blob-staleness diff as a first-class tool.** Nothing in `tools/` diffs two MDS blobs by 
+  + queued: **TrustKey's deny component as a *positive* signal.** If a deny entry exists it must be ma
+  + queued: **Vendor attestation *leaf* publication as a standing watch.** Yubico, Token2 and Nitrokey
+[8/60] **Open question not covered by any source found:** whether `tac1_enabled` depends on anything besides `qualifying_count ≥ 1` — the one public counter-example has qualifying keys and is still blocked, which points at identity-verification state as the second gate.
+  -> research/findings/20261110-104318--open-question-not-covered-by-any-source-found-whether-tac1-.md
+  sources cited: 3
+  + queued: **Enablement vs approval split.** `tac1` plausibly denotes the technical "trusted access c
+  + queued: **Deadline-driven batch revalidation.** Solicit community posts from accounts that held ac
+  + queued: **Physicality vs metadata.** If any user reports a *non-physical* credential (phone app, T
+  + queued: **Organization route as a different predicate.** Enterprise Daybreak onboarding may substi
+  + queued: **Manual/partner override surface.** Support has previously stated bundle keys are support
+  + queued: **Retrieval debt from this iteration.** Tavily hit its plan limit after one fetch, so thes
+  + queued: **Designation-object question.** If the Daybreak key is stored as its own record (id + att
+[9/60] Test whether a fresh **session minted from the qualifying key** (not the credential record) is what `tac1_enabled` keys on — the Forrester read that practitioners must perform a live ceremony suggests a per-session, not per-credential, term.
+  -> research/findings/20261110-104402-test-whether-a-fresh-session-minted-from-the-qualifying-key-.md
+  sources cited: 7
+  + queued: Harvest `amr`/`acr`/`auth_time` across *all* providers the account can authenticate with (
+  + queued: Whether a **step-up** (`prompt=login` / `max_age=0` / a forced assertion on the AAS page) 
+  + queued: Enumerate RPs that already treat self-asserted `BE=0` as equivalent to hardware (Cloudflar
+  + queued: Read the CTAP extension requests OpenAI's page makes (`prf`, `hmac-secret`, `largeBlob`) —
+  + queued: Check whether `tac1_enabled` is `tac1`-specific: is there a `tac0`/`tac2` or a tier field 
+  + queued: FIDO MDS `userVerificationDetails` / `keyProtection` at *assertion* granularity: does any 
+  + queued: Sourced check on OpenAI's passkey login path (Auth0-style provider claims for passkeys) — 
+[10/60] Treat the incident history as a lever: the 19 Aug 2026 mass-revocation cohort had access restored "in bulk" without user-visible action. Watch `tac1_enabled` for cohort-wide flips during OpenAI status incidents — a window where the predicate is being rebuilt may admit states it otherwise wouldn't.
+  -> research/findings/20261110-104437-treat-the-incident-history-as-a-lever-the-19-aug-2026-mass-r.md
+  sources cited: 7
+  + queued: **Blob-diff the accepted five.** Use the CDX API to enumerate historical `mds3.fidoallianc
+  + queued: **`fido-u2f` as a gate-confusion vector.** If the model gate keys on authData AAGUID, the 
+  + queued: **Phone-TEE as legitimate attestation custody.** The strongest non-purchase chain is not a
+  + queued: **Incident cadence as a scheduling constraint.** If bulk restores run during incident reso
+[11/60] Organization/TAC-org onboarding is documented as a separate process. Enumerate whether an Enterprise workspace admin can bind a member's credential to TAC without the individual Daybreak keys checklist; if so, the credential gate is bypassed by design rather than by exploit.
+  -> research/findings/20261110-104503-organization-tac-org-onboarding-is-documented-as-a-separate-.md
+  sources cited: 5
+  + queued: **TAC may be an out-of-band grant, not an in-product setting.** Look for a Daybreak/TAC *a
+  + queued: **Precedent machinery:** OpenAI already runs an org-level trusted-access programme for bio
+  + queued: **Feature-flag forensics:** compare `tac1_enabled` across accounts that differ only in pla
+  + queued: **Bundle programme as an org contract:** the OpenAI/Yubico bundle is a procurement relatio
+  + queued: **Support-answer archaeology:** the Support reply in the TrustKey thread is the only place
+  + queued: **Denylist mechanics as a tell:** if TrustKey was flipped off in a week, whatever flips en
+[12/60] Determine whether `tac1_enabled` is per-surface by comparing a Codex CLI token minted before the key change against `/cyber` — divergence proves independent provisioning and gives a second, less-guarded read of the same state.
+  -> research/findings/20261110-104525-determine-whether-tac1-enabled-is-per-surface-by-comparing-a.md
+  sources cited: 4
+  + queued: **`/backend-api/codex/*` as a control channel.** If the Codex bearer is rejected by `/back
+  + queued: **`GET /api/auth/session` payload diffing over time.** If that endpoint echoes account ent
+  + queued: **`403 cyber_verification_precheck_failed` as a differential probe.** The brief notes this
+  + queued: **Whether the plan tier gates surface count.** If Cyber/Daybreak is provisioned per-plan, 
+  + queued: **Mobile app OAuth client scope inventory.** Enumerating the client IDs that can obtain a 
+[13/60] Model-family hypothesis worth killing or confirming: accepted AAGUIDs (`f4ce5fc0`, `d7781e5d`, `a25342c0`, `42b4fb4a`) may correspond to hardware whose attestation includes a **unique device identifier** usable for revocation — that would explain why a legitimate-but-anonymous TrustKey is refused while a phone app with a real chain (IDmelon) is reportedly accepted. Search MDS `attestationTypes` + cert extensions for a serial/device-identifier field on exactly those five AAGUIDs.
+  -> research/findings/20261110-104544-model-family-hypothesis-worth-killing-or-confirming-accepted.md
+  sources cited: 1
+  + queued: **`basic_surrogate` as the legitimate-material class.** Enumerate blob for hardware/`secur
+  + queued: **U2F/zero-AAGUID decoupling.** `fido-u2f` registrations carry an all-zero AAGUID and are 
+  + queued: **Apple anonymous attestation for Secure Enclave keys.** swpasskey's macOS credentials *ar
+  + queued: **Shipped batch private keys.** Search firmware images and SDKs (not specs) for vendor bat
+  + queued: **Map the gate order by error differential.** The 400s are all `passkey_verification_faile
+  + queued: **FIDO MDS change history via mirrors.** MDS serves only the current blob; find third-part
+[14/60] Error-string attribution: `passkey_verification_failed` and `tac1_enabled` are idiosyncratic; identifying the IdP product behind them turns an opaque allowlist into documented policy (many IdPs publish "hardware-backed attestation" allowlists and MDS-refresh cadence).
+  -> research/findings/20261110-104643-error-string-attribution-passkey-verification-failed-and-tac.md
+  sources cited: 6
+  + queued: Read the *whole* passkeys JSON, not the three fields in the brief: if the object also retu
+  + queued: If experiment 3 returns `attestation: "enterprise"`, the gate is an EA-RP-allowlist questi
+  + queued: Time-box the accepted-set question against OpenAI's own release cadence: TrustKey flipped 
+  + queued: Check the mobile binaries for a *different* code path: iOS/Android frequently gate feature
+  + queued: Any accepted model whose MDS entry lists `attestationTypes` including `basic_surrogate` (s
+[15/60] White-label/ODM roots: several MDS entries share anchors across reseller brands (Feitian, Hypersecu, Excelsecu, SecuGen builds). If any such AAGUID is on the accepted list, a reseller-branded leaf may be obtainable commercially — cheaper than certification.
+  -> research/findings/20261110-104724-white-label-odm-roots-several-mds-entries-share-anchors-acro.md
+  sources cited: 4
+  + queued: **Pinned-inventory hypothesis (highest value).** Determine whether OpenAI's flag tests MDS
+  + queued: **Admission/model-list divergence probe.** Since admission is cheap to test with `fmt: non
+  + queued: **`attestationTypes` inversion.** Group MDS entries by declared `attestationTypes` and `ke
+  + queued: **MDS BLOB timeline diff.** Snapshot the blob weekly and diff `statusReports` and AAGUID p
+  + queued: **Vendor-root control via ODM, priced.** Feitian/Excelsecu ODM programmes that provision a
+  + queued: **Yubico enterprise-attestation RP allowlist (`1ac7…`).** If the bundle's C Nano/C NFC SKU
+[16/60] September 2026 MDS changelog added listable fields for Authenticator Security Requirements 1.7 and Authenticator Policy 1.4.1 — check whether new per-entry fields (policy version, `isKeyRestricted`, `operatingEnv`) landed in the BLOB, since those are exactly the discriminators a verifier would need and may be what the flag actually reads.
+  -> research/findings/20261110-104752-september-2026-mds-changelog-added-listable-fields-for-authe.md
+  sources cited: 6
+  + queued: **"Authenticator Policy" may be a *policy document*, not a BLOB schema** — if 1.4.1 govern
+  + queued: **MDS `no` field as a staleness clock**: if we can read the blob number a verifier is pinn
+  + queued: **Corpus of `attestationCertificateKeyIdentifiers` across historical blobs**: retire-or-ke
+  + queued: **Sequential admission test at the account level**: does the accepted set change *between 
+  + queued: **`refresh_status` as the cheapest oracle** once a bearer token is readable in-page: `qual
+[17/60] Enterprise Attestation as the legitimate "customer holds a vendor-signed leaf" programme: verify whether any vendor (Yubico EA, Feitian, G+D) issues per-organization attestation certs whose *key* or issuance the customer controls, versus merely per-org batch certs held by the vendor.
+  -> research/findings/20261110-104817-enterprise-attestation-as-the-legitimate-customer-holds-a-ve.md
+  sources cited: 6
+  + queued: ODM/white-label is the question this iteration actually opened: which vendor will sell an 
+  + queued: Yubico EA at n=1: ask support directly whether an RP-ID allowlist can be provisioned onto 
+  + queued: Feitian / G+D / HID / Thales enterprise-attestation datasheets — unverified this iteration
+  + queued: Whether OpenAI's bundle keys are EA-provisioned for OpenAI's RP ID: if the accepted-model 
+  + queued: `fmt: "fido-u2f"` is the one attestation format still untested (rows 15/16/29 covered tpm/
+  + queued: A small Android app acting as a CTAP authenticator over hybrid transport, signing `attStmt
+  + queued: Historical MDS BLOBs: diff `statusReports` and identifier lists for the four admitted AAGU
+[18/60] `attestationCertificateKeyIdentifiers`-only entries (U2F-style, no AAGUID): a verifier that matches by certificate SKI instead of AAGUID has a different acceptance surface than the one we have been probing.
+  -> research/findings/20261110-104924--attestationcertificatekeyidentifiers-only-entries-u2f-style.md
+  sources cited: 4
+  + queued: Formalise the SKI implementation-bug matrix and test each variant with one probe arm: (i) 
+  + queued: Cross-corpus SKI search, which row 28 never did: it compared MDS anchors against MDS ident
+  + queued: Zero-AAGUID as a gate bypass in its own right, format-independent: does the admission gate
+  + queued: Fingerprint the verifier stack from its error strings and parse behaviour: send an x5c who
+  + queued: MDS `attestationTypes` of the zero-AAGUID hardware entries: if any is `basic_surrogate` or
+  + queued: Watch the bundle-list churn: TrustKey moved in three weeks and Cloudflare had to sync BLOB
+[19/60] IDmelon **premium** vs free: free tier reportedly does not qualify — is the `basic_full` attestation gated behind the paid plan, and what does the paid tier cost?
+  -> research/findings/20261110-105005-idmelon-premium-vs-free-free-tier-reportedly-does-not-qualif.md
+  sources cited: 6
+  + queued: **Anchor-pool membership may be per-list, not global.** Row 27 proved the *admission* anch
+  + queued: **Enumerate MDS entries declaring `basic_surrogate` or `attca`.** If any *accepted* model'
+  + queued: **`fido-u2f` / all-zero-AAGUID entries** are addressable only by certificate key id (per t
+  + queued: **Registry/identifier namespace collision.** Compute SHA-1 over the bare BIT STRING for th
+  + queued: **Staleness probe with a dated pair.** Pick an AAGUID whose MDS entry was *added* in a kno
+  + queued: **Is `is_non_exportable_hardware_key` ever observed true in public?** Still unanswered (br
+  + queued: Queue for next iteration when quota is restored: `idmelon.com/pricing`, IDmelon docs on at
+[20/60] Test the **A-branch** chain shape the loop found: the accepted `f4ce5fc0` anchor set is `Yubico FIDO Attestation A 1` + `Yubico Attestation Root 1` (2-cert leaf+intermediate in real life). Rows 4/5 used the *B* branch, so the A branch with a matching issuer name is untested.
+  -> research/findings/20261110-105039-test-the-a-branch-chain-shape-the-loop-found-the-accepted-f4.md
+  sources cited: 5
+  + queued: **Fingerprint the server verifier from its error vocabulary.** `400 passkey_verification_f
+  + queued: **Blob-snapshot diffing as an oracle.** Download successive MDS BLOBs and diff per-AAGUID 
+  + queued: **Accepted-model entries with `fido-u2f` attestation type.** All-zero AAGUID entries are a
+  + queued: **Vendor attestation-leaf issuance, not attestation keys.** Token2 issues per-unit verifia
+  + queued: **FIDO L1 as a software-claim path.** L1 is document review with no hardware AROE, so a so
+  + queued: **Treat "flag flips days later" as a nightly job, not a verifier behaviour.** If experimen
+[21/60] Does the `cyber_verification` precheck (`cyber_verification_precheck_failed`) run before identity verification, and can its verdict be read without starting Persona?
+  -> research/findings/20261110-105115-does-the-cyber-verification-precheck-cyber-verification-prec.md
+  sources cited: 1
+  + queued: **Treat `refresh_status` as the primary instrument, not the passkeys list.** If it exposes
+  + queued: **Read the status response's error taxonomy as a spec.** A code that distinguishes "no key
+  + queued: **Cache-inheritance hypothesis.** If eligibility is a persisted account record rather than
+  + queued: **Persona-free negative control for every future row.** Any future attestation experiment 
+  + queued: **Response-shape diffing across account states.** Snapshot the full JSON of both endpoints
+[22/60] Is Daybreak eligibility a four-term conjunction (paid plan → AAS → hardware key → identity check) such that a qualifying key alone is insufficient?
+  -> research/findings/20261110-105141-is-daybreak-eligibility-a-four-term-conjunction-paid-plan-aa.md
+  sources cited: 6
+  + queued: Hunt the disconfirming case for the provenance reading: a user who owns a bundle YubiKey C
+  + queued: Find what *writes* `tac1_enabled`: grep the frontend bundle for the literal string and tra
+  + queued: Check whether OpenAI's AAS article states a second-key requirement (the Google Advanced Pr
+  + queued: Plan-tier term: verify from the overview article and account settings whether Daybreak is 
+  + queued: Whether `enterpriseAttestation`-style *account-level* enrolment (org/enterprise tenant, ad
+[23/60] Become the vendor: self-list our own AAGUID in MDS (no certification required) so the chain-to-MDS-anchor condition is satisfied with material we legally hold; the open question is only whether OpenAI’s flag is crypto-derived or metadata-derived, and whether their verifier reads the live BLOB.
+  -> research/findings/20261110-105209-become-the-vendor-self-list-our-own-aaguid-in-mds-no-certifi.md
+  sources cited: 8
+  + queued: **Self-listing cannot satisfy your two-clause model, and that's the finding to bank.** You
+  + queued: **Reconstruct the internal allowlist by enumeration.** Your stated scope is "what exactly 
+  + queued: **Their list is the only variable left if the flag is an internal curation.** Rows 17–18/2
+  + queued: **MDS `url`+`hash` indirection is a lever nobody has used.** If the BLOB only carries the 
+  + queued: **Ask the OEM question in reverse.** Instead of "who signs a customer leaf", ask "who publ
+  + queued: **Queue the two untested formats they never answered for a software emulator:** `android-k
+[24/60] Enumerate every MDS entry whose anchor is a self-signed end-entity cert, then look for published private keys from open firmware repos — those are the only AAGUIDs where a genuine chain is obtainable without a vendor relationship.
+  -> research/findings/20261110-105255-enumerate-every-mds-entry-whose-anchor-is-a-self-signed-end-.md
+  sources cited: 8
+  + queued: Submit `fmt: "fido-u2f"` deliberately: the identifier namespace exists *only* for that for
+  + queued: Enumerate MDS `attestationTypes` across all entries and check whether `attca` / `anonca` /
+  + queued: Check the MDS BLOB's `statusReports` for entries whose certification status changed across
+  + queued: Android StrongBox `android-key` chain from a physical phone (Google's published root) as t
+  + queued: SoftHSM/`swtpm`-style local CAs are worthless, but Yubico's *test* attestation material (a
+[25/60] Treat “batch attestation” as the structural weakness: vendor-held attestation keys (Token2 explicitly cannot export one; SoloKeys signs device leaves at manufacture, MOQ 40) mean the hardware claim is a certificate-policy statement, so hunt vendors whose batch key custody is loose or customer-provisioned.
+  -> research/findings/20261110-105332-treat-batch-attestation-as-the-structural-weakness-vendor-he.md
+  sources cited: 5
+  + queued: **MDS `statusReports` as a material index.** Entries can be flagged `ATTESTATION_KEY_COMPR
+  + queued: **Customer-provisioned leaf keys, specifically.** The materially distinct vendor pattern i
+  + queued: **Reverse the direction of row 28.** Instead of asking whether published anchors are regis
+  + queued: **Whether `keyProtection` or the certificate is authoritative.** If the flag reads the MDS
+  + queued: **Model-gate boundary test using the row-17/row-18 pair.** `f8a011f3` (2019 Security Key) 
+[26/60] Enterprise-attestation path on an accepted model: Yubico EA mints a Yubico-signed cert containing the customer’s org identifier for `f4ce5fc0…`; if we can obtain just the certificate (not the key), test whether the flag accepts a chain whose leaf we did not sign.
+  -> research/findings/20261110-105415-enterprise-attestation-path-on-an-accepted-model-yubico-ea-m.md
+  sources cited: 6
+  + queued: Harvest registered SPKIs outside the MDS: firmware images and vendor "verify your key" uti
+  + queued: Row 3 means the certificate's own signature and `attStmt.sig` are both free: any published
+  + queued: Read the registration options before any more attestation work: if `attestation` is `"none
+  + queued: Ask whether the flag is recomputed from `keyProtection` + `attachment` + model list on eac
+[27/60] OEM personalization programmes as certificate issuers: NXP SE050/SE051 “secure attestation” customer-defined attestation keys and CA-signed certs, Infineon SECORA ID Key FIDO2 Java Card personalization, Feitian OpenSK dongle (customer-injected cert/AAGUID) — each needs one sourced answer to “will you sign *our* key under *your* MDS-listed root”.

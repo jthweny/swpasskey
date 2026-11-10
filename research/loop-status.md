@@ -84,3 +84,29 @@ extension-presence question, newer-unreleased AAGUIDs, and a search for any repo
 - 10:15 OpenSK (Google's open FIDO2 firmware) and Nitrokey 3 / Solo v2: customer-flashable firmwar -> 20261110-101442-opensk-google-s-open-fido2-firmware-and-nitrokey-3-solo-v2-c.md
 - 10:15 `keyProtection`/`attestationTypes` differential: enumerate every MDS entry with `attestati -> 20261110-101525--keyprotection-attestationtypes-differential-enumerate-every.md
 - 10:16 The Daybreak doc is the only published artefact that names models. Monitor it as a version -> 20261110-101542-the-daybreak-doc-is-the-only-published-artefact-that-names-m.md
+- 10:37 **Batch-leaf replay as the primary path.** Because leaves are batch-scoped (≥100k devices  -> 20261110-103537--batch-leaf-replay-as-the-primary-path-because-leaves-are-ba.md
+- 10:40 **Metadata staleness**: enumerate AAGUIDs whose admission-relevant fields (description, an -> 20261110-103751--metadata-staleness-enumerate-aaguids-whose-admission-releva.md
+- 10:41 **Find a published `is_non_exportable_hardware_key: true` observation** (screenshot, log l -> 20261110-104026--find-a-published-is-non-exportable-hardware-key-true-observ.md
+- 10:41 **Does any software credential ever flip to true** in community reports, or only genuine d -> 20261110-104117--does-any-software-credential-ever-flip-to-true-in-community.md
+- 10:42 `qualifying_count` oracle: is the bearer token readable from the page (localStorage/sessio -> 20261110-104145--qualifying-count-oracle-is-the-bearer-token-readable-from-t.md
+- 10:42 **`qualifying_count` is an oracle the project is not using.** It reports counts directly,  -> 20261110-104212--qualifying-count-is-an-oracle-the-project-is-not-using-it-r.md
+- 10:43 **Model-gate enumeration via MDS mirror.** The Token2 MDS explorer exposes per-AAGUID `att -> 20261110-104236--model-gate-enumeration-via-mds-mirror-the-token2-mds-explor.md
+- 10:44 **Open question not covered by any source found:** whether `tac1_enabled` depends on anyth -> 20261110-104318--open-question-not-covered-by-any-source-found-whether-tac1-.md
+- 10:44 Test whether a fresh **session minted from the qualifying key** (not the credential record -> 20261110-104402-test-whether-a-fresh-session-minted-from-the-qualifying-key-.md
+- 10:45 Treat the incident history as a lever: the 19 Aug 2026 mass-revocation cohort had access r -> 20261110-104437-treat-the-incident-history-as-a-lever-the-19-aug-2026-mass-r.md
+- 10:45 Organization/TAC-org onboarding is documented as a separate process. Enumerate whether an  -> 20261110-104503-organization-tac-org-onboarding-is-documented-as-a-separate-.md
+- 10:45 Determine whether `tac1_enabled` is per-surface by comparing a Codex CLI token minted befo -> 20261110-104525-determine-whether-tac1-enabled-is-per-surface-by-comparing-a.md
+- 10:46 Model-family hypothesis worth killing or confirming: accepted AAGUIDs (`f4ce5fc0`, `d7781e -> 20261110-104544-model-family-hypothesis-worth-killing-or-confirming-accepted.md
+- 10:47 Error-string attribution: `passkey_verification_failed` and `tac1_enabled` are idiosyncrat -> 20261110-104643-error-string-attribution-passkey-verification-failed-and-tac.md
+- 10:47 White-label/ODM roots: several MDS entries share anchors across reseller brands (Feitian,  -> 20261110-104724-white-label-odm-roots-several-mds-entries-share-anchors-acro.md
+- 10:48 September 2026 MDS changelog added listable fields for Authenticator Security Requirements -> 20261110-104752-september-2026-mds-changelog-added-listable-fields-for-authe.md
+- 10:49 Enterprise Attestation as the legitimate "customer holds a vendor-signed leaf" programme:  -> 20261110-104817-enterprise-attestation-as-the-legitimate-customer-holds-a-ve.md
+- 10:50 `attestationCertificateKeyIdentifiers`-only entries (U2F-style, no AAGUID): a verifier tha -> 20261110-104924--attestationcertificatekeyidentifiers-only-entries-u2f-style.md
+- 10:50 IDmelon **premium** vs free: free tier reportedly does not qualify — is the `basic_full` a -> 20261110-105005-idmelon-premium-vs-free-free-tier-reportedly-does-not-qualif.md
+- 10:51 Test the **A-branch** chain shape the loop found: the accepted `f4ce5fc0` anchor set is `Y -> 20261110-105039-test-the-a-branch-chain-shape-the-loop-found-the-accepted-f4.md
+- 10:51 Does the `cyber_verification` precheck (`cyber_verification_precheck_failed`) run before i -> 20261110-105115-does-the-cyber-verification-precheck-cyber-verification-prec.md
+- 10:52 Is Daybreak eligibility a four-term conjunction (paid plan → AAS → hardware key → identity -> 20261110-105141-is-daybreak-eligibility-a-four-term-conjunction-paid-plan-aa.md
+- 10:52 Become the vendor: self-list our own AAGUID in MDS (no certification required) so the chai -> 20261110-105209-become-the-vendor-self-list-our-own-aaguid-in-mds-no-certifi.md
+- 10:53 Enumerate every MDS entry whose anchor is a self-signed end-entity cert, then look for pub -> 20261110-105255-enumerate-every-mds-entry-whose-anchor-is-a-self-signed-end-.md
+- 10:54 Treat “batch attestation” as the structural weakness: vendor-held attestation keys (Token2 -> 20261110-105332-treat-batch-attestation-as-the-structural-weakness-vendor-he.md
+- 10:55 Enterprise-attestation path on an accepted model: Yubico EA mints a Yubico-signed cert con -> 20261110-105415-enterprise-attestation-path-on-an-accepted-model-yubico-ea-m.md

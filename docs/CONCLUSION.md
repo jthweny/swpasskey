@@ -37,12 +37,23 @@ certificate. `is_non_exportable_hardware_key: true` was never reached.
 
 ## What the flag therefore depends on
 
-The remaining input is `attestationCertificateKeyIdentifiers`: a SHA-1 over the
-*leaf's public key*. It identifies a key, not a chain, which explains every
-observation above — anchors are borrowable (they are published), signatures are
-irrelevant (nobody checks them), and the flag still never moves because the
-registered key is inside the device and the certificate that carries it is never
-published.
+Corrected after the loop pointed out that the accepted Yubico entries carry **no**
+`attestationCertificateKeyIdentifiers` at all (136 MDS entries have them; none of our
+accepted AAGUIDs does; none is identifier-only).
+
+So for the model we enrol with, the flag cannot be an identifier hash. It has to be
+**path validation of the leaf certificate to an anchor in the MDS** — a signature the
+leaf must carry from the vendor's CA. That fits every measurement:
+
+* our leaf is genuinely issued by our own key, and appending the vendor's real anchors
+  does not make the *path* valid (rows 4, 21, 27) — the anchors are present, the link
+  is missing;
+* the `attStmt` signature is a separate signature and is not checked (row 3), which is
+  why forged statements enrol while the hardware flag stays false;
+* identifiers exist for U2F-era and some legacy entries, but they are a second
+  attribution path used *alongside* anchors, never instead of them.
+
+Same wall, different mechanism: it is a vendor signature on the leaf, not a hash.
 
 ## The two ways to actually clear it
 
