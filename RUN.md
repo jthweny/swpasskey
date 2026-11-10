@@ -29,48 +29,79 @@ Output: `~/VirtualYubi/swpasskey/dist/swpasskey.dmg`.
 Unsigned means: installs, runs, sits in the menu bar, but has no HID entitlement,
 so it cannot pretend to be a USB device. Good for checking the pipeline.
 
-## 2. Build the real thing (signed, notarized)
+## 2. Build the real thing (signed, with the HID entitlement)
 
-Pick your identity from this list:
+You need three things that only your Apple account can provide:
+
+1. **A signing identity** in the keychain. List them:
 
 ```sh
 security find-identity -v -p codesigning
 ```
 
-Copy one of the quoted names verbatim into the next line:
+`make_dmg.sh` uses the first one automatically — no placeholder to paste. To pick
+one explicitly, copy the exact quoted name from that output:
 
 ```sh
-export SWPASSKEY_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+export SWPASSKEY_IDENTITY="Apple Development: Joshua Thweny (5G4RMX5PC7)"
 ```
 
-Put the provisioning profile for your App ID here, once. It must grant
-`com.apple.developer.hid.virtual.device` (see `packaging/macos/README.md`):
+`Apple Development:` signs for **this Mac** (install and run it locally).
+`Developer ID Application:` is the one that can be distributed and notarized.
+Notarization is refused with an Apple Development identity, on purpose.
+
+2. **A provisioning profile whose App ID has the HID capability.** This is the
+real gate; nothing here can create it.
+
+   - developer.apple.com → Certificates, Identifiers & Profiles → **Identifiers**
+   - register the explicit App ID `com.tangzixiang.swpasskey.daemon` (wildcards
+     cannot carry restricted entitlements)
+   - in that App ID's capability list, enable **HID Virtual Device**
+     (`com.apple.developer.hid.virtual.device`). If it is not listed, it has to be
+     granted to your team first — request it through Apple Developer Support; it
+     is a restricted entitlement, not a self-service checkbox
+   - **Profiles** → **+** → *macOS App Development* for that App ID → download
+
+3. **The profile on disk:**
 
 ```sh
 cp ~/Downloads/Your_Profile.provisionprofile \
    ~/VirtualYubi/swpasskey/packaging/macos/embedded.provisionprofile
 ```
 
-Notary credentials, once:
+Verify it actually grants the entitlement before building. `1` means yes, `0`
+means the App ID does not have the capability:
 
 ```sh
-xcrun notarytool store-credentials swpasskey-notary \
-  --apple-id you@example.com --team-id TEAMID
+security cms -D -i packaging/macos/embedded.provisionprofile |
+  grep -c hid.virtual.device
 ```
 
-Then build and wrap:
+Then build:
 
 ```sh
-export SWPASSKEY_NOTARY_PROFILE=swpasskey-notary
 cd ~/VirtualYubi/swpasskey
 cmake --preset app
 cmake --build build/app -j
 packaging/macos/make_dmg.sh build/app
 ```
 
-Watch the warnings `make_app.sh` prints. `profile does not grant
-com.apple.developer.hid.virtual.device; stripping it` means the app will install
-and run but no browser will see a key.
+Read what `make_app.sh` prints inside that. This line means the profile is not
+granting the entitlement and the key will not enumerate:
+
+```
+warning: profile does not grant com.apple.developer.hid.virtual.device; stripping it
+```
+
+Notarize only with a Developer ID identity, and only if you plan to run the DMG
+on another Mac:
+
+```sh
+xcrun notarytool store-credentials swpasskey-notary \
+  --apple-id you@example.com --team-id TEAMID
+export SWPASSKEY_NOTARY_PROFILE=swpasskey-notary
+packaging/macos/make_dmg.sh build/app
+```
 
 ## 3. Install and start
 

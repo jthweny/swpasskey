@@ -26,7 +26,15 @@ Developer account's "Certificates, Identifiers & Profiles → Identifiers" page
 (enable the capability on the App ID), or through Apple Developer Support if it
 is not listed for your account.
 
-Then download the provisioning profile for that App ID and drop it here:
+Check whether your team has it: on the App ID's page the capability appears as
+**HID Virtual Device**. If it is missing, request it through Apple Developer
+Support — this is not a self-service checkbox. A wildcard App ID cannot carry it;
+register the explicit ID `com.tangzixiang.swpasskey.daemon` (or change the bundle
+ID in `packaging/macos/swpasskeyd.app/Contents/Info.plist` and the LaunchAgent
+label to one you own).
+
+Then download a *macOS App Development* provisioning profile for that App ID and
+drop it here:
 
 ```
 packaging/macos/embedded.provisionprofile
@@ -71,11 +79,15 @@ or build OpenSSL from source for the oldest target you support.
 ## 2. Sign, bundle, wrap in a DMG
 
 ```sh
-IDENTITY="$(security find-identity -v -p codesigning \
-  | sed -n 's/.*"\(Developer ID Application.*\)"/\1/p' | head -1)"
-
-packaging/macos/make_dmg.sh build/app "$IDENTITY" release
+security find-identity -v -p codesigning
+packaging/macos/make_dmg.sh build/app
 ```
+
+With no identity argument the script uses the first identity in the keychain and
+prints which one. `Apple Development:` is enough for a local install;
+`Developer ID Application:` is required only for distribution and notarization,
+and `--notarize` refuses anything else instead of letting notarytool fail the
+upload.
 
 Output: `dist/swpasskey.dmg` (small, ~600 KB) plus its SHA-256. Add notarization
 so a fresh Mac does not warn:

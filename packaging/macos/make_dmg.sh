@@ -35,6 +35,17 @@ fi
 
 BUILD_DIR=$1
 IDENTITY=${2:-${SWPASSKEY_IDENTITY:-}}
+if [ -z "$IDENTITY" ]; then
+  # No identity given: take the first codesigning identity in the keychain, so a
+  # copy-pasted placeholder can never end up in a codesign invocation.
+  IDENTITY=$(security find-identity -v -p codesigning |
+    sed -n 's/.*"\(.*\)".*/\1/p' | head -1)
+  if [ -n "$IDENTITY" ]; then
+    echo "make_dmg: signing with: $IDENTITY" >&2
+  else
+    echo "make_dmg: no code-signing identity in the keychain; the DMG will be unsigned" >&2
+  fi
+fi
 MODE=${3:-${SWPASSKEY_MODE:-release}}
 NOTARIZE="${SWPASSKEY_NOTARY_PROFILE:-}"
 case "${4:-}" in
@@ -98,6 +109,21 @@ EOF
 rm -f "$DMG"
 hdiutil create -quiet -volname "$VOL_NAME" -srcfolder "$STAGE/volume" \
   -fs HFS+ -format UDZO -imagekey zlib-level=9 "$DMG"
+
+# Notarization only accepts Developer ID Application signatures; an Apple
+# Development certificate is for local installs, so say that here instead of
+# letting notarytool reject the upload.
+case "$IDENTITY" in
+  "Developer ID Application"*) ;;
+  "") ;;
+  *)
+    if [ -n "$NOTARIZE" ]; then
+      echo "make_dmg: notarization needs a Developer ID Application identity" >&2
+      echo "make_dmg: this machine has '$IDENTITY', which is fine for a local install" >&2
+      exit 2
+    fi
+    ;;
+esac
 
 if [ -n "$IDENTITY" ]; then
   codesign --force --timestamp --sign "$IDENTITY" "$DMG"
