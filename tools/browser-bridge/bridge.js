@@ -12,7 +12,10 @@
 // its own origin and its own challenge, and an attestationObject signed by the
 // daemon's attestation key.
 (() => {
-  const BRIDGE = window.__SWPK_BRIDGE || "http://127.0.0.1:8100";
+  // The page's Content-Security-Policy decides this, not us. OpenAI's
+  // connect-src allows http://localhost:3000 and not 127.0.0.1, so that is the
+  // default; override with window.__SWPK_BRIDGE for a site with a different rule.
+  const BRIDGE = window.__SWPK_BRIDGE || "http://localhost:3000";
 
   const b64u = (buf) => {
     const bytes = new Uint8Array(buf);
@@ -30,11 +33,21 @@
   };
 
   const call = async (path, body) => {
-    const res = await fetch(BRIDGE + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    let res;
+    try {
+      res = await fetch(BRIDGE + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      // A CSP or connection failure has no useful message of its own.
+      throw new DOMException(
+        `bridge unreachable at ${BRIDGE} (${err.message}). Start it on that exact ` +
+          `origin: if the page's CSP blocked it, look at connect-src and move the bridge.`,
+        "NotAllowedError",
+      );
+    }
     const json = await res.json().catch(() => ({ ok: false, error: res.statusText }));
     if (!json.ok) {
       throw new DOMException(json.error || "bridge refused", "NotAllowedError");
@@ -42,7 +55,28 @@
     return json;
   };
 
-  const extensionResults = (result) => result || {};
+  // Chrome hands back ArrayBuffers for PRF outputs; keep the shape.
+  const extensionResults = (result) => {
+    const out = result || {};
+    if (out.prf && out.prf.results) {
+      const results = {};
+      for (const key of Object.keys(out.prf.results)) {
+        results[key] = unb64u(out.prf.results[key]);
+      }
+      out.prf = { ...out.prf, results };
+    }
+    return out;
+  };
+
+  const prfInput = (extensions) => {
+    const prf = extensions && extensions.prf;
+    if (!prf || !prf.eval) return null;
+    const out = { eval: {} };
+    for (const key of ["first", "second"]) {
+      if (prf.eval[key]) out.eval[key] = b64u(prf.eval[key]);
+    }
+    return out.eval.first ? out : null;
+  };
 
   const create = async (options) => {
     const pk = options && options.publicKey;
@@ -58,7 +92,7 @@
       userDisplayName: pk.user.displayName || "",
       userVerification: selection.userVerification || pk.userVerification || "preferred",
       residentKey: selection.residentKey || (selection.requireResidentKey ? "required" : "preferred"),
-      extensions: pk.extensions || {},
+      prf: pk.extensions && pk.extensions.prf ? true : false,
     });
 
     const credential = {
@@ -107,7 +141,7 @@
         transports: c.transports || [],
       })),
       userVerification: pk.userVerification || "preferred",
-      extensions: pk.extensions || {},
+      prf: prfInput(pk.extensions),
     });
 
     return {

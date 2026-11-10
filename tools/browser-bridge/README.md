@@ -68,6 +68,44 @@ default, so the bridge sets this one on first use:
 SWPASSKEY_BRIDGE_PIN=123456 .venv/bin/python tools/browser-bridge/bridge_server.py --hid-socket /tmp/swpk.sock
 ```
 
+## The port is not a detail: the page's CSP decides
+
+The first attempt against the real site fails like this:
+
+```
+Connecting to 'http://127.0.0.1:8100/webauthn/create' violates the following
+Content Security Policy directive: "connect-src 'self' blob: … http://localhost:3000 …"
+```
+
+The shim runs inside the page, so `connect-src` applies to its `fetch`. That
+policy allows **`http://localhost:3000`** and not `127.0.0.1`, so the bridge
+listens on that exact origin by default:
+
+```sh
+SWPASSKEY_BRIDGE_PIN=123456 .venv/bin/python tools/browser-bridge/bridge_server.py --hid-socket /tmp/swpk.sock
+# -> [bridge] listening on http://localhost:3000/
+```
+
+For a site with a different rule, read its `connect-src` and set both:
+`--port N` on the server and `window.__SWPK_BRIDGE = "http://localhost:N"` before
+the shim (or edit `BRIDGE` in `bridge.js`).
+
+`tools/webauthn-probe/server.py --csp` serves the probe page with a matching
+policy, so this class of failure is reproducible without the real site.
+
+## PRF
+
+Sites that use passkeys for encryption (ChatGPT's enrollment does) ask for the
+**PRF** extension. The bridge maps it onto the daemon's CTAP `hmac-secret`
+extension, which is the mechanism PRF is built on:
+
+* `create` with `extensions.prf` → sends `hmac-secret: true`, and reports
+  `prf.enabled: true`. The authData carries the ED flag, as on a real key.
+* `get` with `prf.eval.first` (and optionally `.second`) → salts are
+  `SHA-256(eval)`, evaluated under the UV credRandom, decrypted, and returned as
+  `prf.results.first` / `.second` — 32-byte `ArrayBuffer`s, stable for a given
+  salt.
+
 ## Point it at the real site
 
 1. Open the site's sign-in page and get to the screen that offers **add a security
@@ -121,3 +159,8 @@ Consequences worth knowing before you read a verdict from this:
   (`Page.addScriptToEvaluateOnNewDocument`) or reload after pasting.
 * Assertions honour `allowCredentials` and discoverable selection; conditional
   mediation (autofill) is not implemented.
+* `response.getPublicKey()` returns `null`; sites that read the SPKI at
+  registration (rare) would notice. The COSE key is in the attestation object
+  anyway.
+* PRF needs the credential to have been created with `hmac-secret`, i.e. through
+  this bridge. Credentials registered before that will return no PRF output.

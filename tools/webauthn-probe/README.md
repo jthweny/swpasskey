@@ -10,6 +10,7 @@ python3 tools/webauthn-probe/server.py                 # http://localhost:8080
 python3 tools/webauthn-probe/server.py --port 9000
 python3 tools/webauthn-probe/server.py --tls           # self-signed HTTPS in ./certs
 python3 tools/webauthn-probe/server.py --bind 0.0.0.0  # reach it from another device
+python3 tools/webauthn-probe/server.py --csp           # CSP like the target site's
 ```
 
 Requires Python 3.9+ and `openssl` on `PATH` (certificate subject/issuer, and the

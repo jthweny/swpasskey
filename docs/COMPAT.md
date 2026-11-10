@@ -191,9 +191,11 @@ be given a fresh registration to judge.
 the relying party receives a real packed attestation with `x5c` without any USB
 device and without the entitlement. Verified in Chrome: registered `fmt=packed`,
 AAGUID `f4ce5fc0-…`, certificate `CN=YubiKey 5C NFC, O=Yubico AB`, `UP|UV`, BE/BS
-clear; sign-in `signCount=2`. It measures the relying party's classifier, which is
-the question — but it is not a device, and it is not a claim that the same key
-would pass a browser-level check.
+clear; sign-in `signCount=2`; PRF via CTAP `hmac-secret` returns 32-byte outputs.
+Two practical constraints: the bridge must listen on an origin the page's
+`connect-src` allows (OpenAI's policy names `http://localhost:3000` and not
+`127.0.0.1`), and it measures the relying party's classifier only — it is not a
+device and not a claim that the same key would pass a browser-level check.
 
 ### Probe page
 
