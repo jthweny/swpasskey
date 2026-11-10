@@ -125,3 +125,38 @@ def build(auth_data: bytes, client_data_hash: bytes, credential_xy, aaguid: byte
         "certInfo": info,
         "pubArea": area,
     }, "tpm"
+
+# --- apple attestation -------------------------------------------------------
+# WebAuthn §8.8: x5c chain to Apple's root, plus a nonce extension equal to
+# SHA-256(authData || clientDataHash). Generated locally here, so the chain is
+# ours — the question the probe answers is whether the verifier checks the nonce
+# only, or the chain too.
+APPLE_NONCE_OID = ObjectIdentifier("1.2.840.113635.100.8.2")
+
+
+def apple_statement(auth_data: bytes, client_data_hash: bytes, aaguid: bytes | None = None):
+    key = ec.generate_private_key(ec.SECP256R1())
+    nonce = hashes.Hash(hashes.SHA256())
+    nonce.update(auth_data)
+    nonce.update(client_data_hash)
+    digest = nonce.finalize()
+    # The extension value is DER: SEQUENCE { [1] OCTET STRING digest }
+    inner = b"\x04\x20" + digest
+    seq = b"\x30" + bytes([len(inner) + 4]) + b"\xa1\x22" + b"\x04\x20" + digest
+    now = datetime.datetime.now(datetime.timezone.utc)
+    builder = (x509.CertificateBuilder()
+               .subject_name(x509.Name([x509.NameAttribute(ObjectIdentifier("2.5.4.3"), "Apple WebAuthn Attestation")]))
+               .issuer_name(x509.Name([x509.NameAttribute(ObjectIdentifier("2.5.4.3"), "Apple WebAuthn Attestation")]))
+               .public_key(key.public_key())
+               .serial_number(x509.random_serial_number())
+               .not_valid_before(now).not_valid_after(now + datetime.timedelta(days=3650))
+               .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+               .add_extension(x509.UnrecognizedExtension(APPLE_NONCE_OID, seq), critical=False))
+    if aaguid:
+        builder = builder.add_extension(
+            x509.UnrecognizedExtension(ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4"),
+                                       b"\x04\x10" + bytes(aaguid)), critical=False)
+    cert = builder.sign(key, hashes.SHA256())
+    der = cert.public_bytes(serialization.Encoding.DER)
+    sig = key.sign(auth_data + client_data_hash, ec.ECDSA(hashes.SHA256()))
+    return {"x5c": [der], "sig": sig}, "apple"

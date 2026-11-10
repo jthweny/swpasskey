@@ -367,7 +367,11 @@ class Handler(BaseHTTPRequestHandler):
             auth_data_der = bytes(auth_data_der)
         exp_fmt = os.environ.get("SWPASSKEY_BRIDGE_FMT", "")
         exp_x5c = os.environ.get("SWPASSKEY_BRIDGE_X5C", "")
-        if exp_fmt == "tpm":
+        if exp_fmt == "apple":
+            stmt, _ = tpm_statement.apple_statement(auth_data_der, cdh, aaguid=bytes(auth_data_der[37:53]))
+            att_obj = cbor.encode({"fmt": "apple", "attStmt": stmt, "authData": auth_data_der})
+            print("[bridge] EXPERIMENT fmt=apple (local chain, nonce extension set)", file=sys.stderr)
+        elif exp_fmt == "tpm":
             cred = attestation.auth_data.credential_data.public_key
             stmt, fmt = tpm_statement.build(
                 auth_data_der, cdh, (cred[-2], cred[-3]),

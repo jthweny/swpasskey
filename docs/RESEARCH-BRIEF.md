@@ -129,6 +129,7 @@ macOS (CTAP2 daemon + browser bridge):
 | 26 | AAGUID `0f083f18` **Security Key C NFC 5.8** — the retail $29 model users report working | 200, "Security Key Series with NFC (Consumer Profile)" | false |
 | 27 | **global-anchor-pool probe**: AAGUID `5df66f62` Securitag (refused on sight in row 10) but `x5c` ending in the genuine Yubico A-1 → Intermediate A-1 → Root 1 | **200**, resolved as "Securitag Assembly Group FIDO Authenticator NFC" | false |
 | 28 | **published-material replay**: for every end-entity MDS anchor (1102 certificates), is its own SPKI hash listed in `attestationCertificateKeyIdentifiers`, or does it carry an AAGUID extension? | **0 of 1102 for both** | n/a |
+| 29 | Yubico AAGUID + `fmt: "apple"`, local chain with the Apple nonce extension (`1.2.840.113635.100.8.2` = SHA-256(authData‖cdh)) | **400** | n/a |
 
 Two derived facts worth carrying:
 
