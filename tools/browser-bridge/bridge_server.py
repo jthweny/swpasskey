@@ -41,6 +41,9 @@ from fido2.ctap2.pin import PinProtocolV2
 from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
 HERE = Path(__file__).resolve().parent
 
 
@@ -178,6 +181,20 @@ def client_data(kind: str, challenge: bytes, origin: str) -> bytes:
         {"type": kind, "challenge": b64u(challenge), "origin": origin, "crossOrigin": False},
         separators=(",", ":"),
     ).encode()
+
+
+def spki_from_cose(cose) -> bytes:
+    """DER SubjectPublicKeyInfo for a P-256 COSE key, as Chrome's
+    response.getPublicKey() returns it. Relying parties that verify with an
+    off-the-shelf WebAuthn library expect this field to be a real SPKI blob, not
+    empty, even though it duplicates the key inside attestationObject."""
+    x, y = cose[-2], cose[-3]
+    key = ec.EllipticCurvePublicNumbers(
+        int.from_bytes(x, "big"), int.from_bytes(y, "big"), ec.SECP256R1()
+    ).public_key()
+    return key.public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
 
 
 def prf_salts(prf: dict) -> list:
@@ -330,8 +347,13 @@ class Handler(BaseHTTPRequestHandler):
         att_obj = cbor.encode(
             {"fmt": attestation.fmt, "attStmt": attestation.att_stmt, "authData": bytes(auth_data)}
         )
+        auth_data_der = bytes(auth_data)
+        credential_data = attestation.auth_data.credential_data
         record = {
             "ok": True,
+            "authenticatorData": b64u(auth_data_der),
+            "publicKey": b64u(spki_from_cose(credential_data.public_key)),
+            "publicKeyAlgorithm": -7,
             "credentialId": b64u(parsed.get("credential_id", b"")),
             "clientDataJSON": b64u(client_data("webauthn.create", challenge, origin)),
             "attestationObject": b64u(att_obj),
@@ -350,7 +372,7 @@ class Handler(BaseHTTPRequestHandler):
         )
         return record
 
-    def get_assertion(self, body: dict) -> dict:
+    def get_assertion(self, body: dict) -> dict:  # noqa: C901
         challenge = b64u_decode(body["challenge"])
         origin = body["origin"]
         cdh = hashlib.sha256(client_data("webauthn.get", challenge, origin)).digest()
@@ -393,6 +415,7 @@ class Handler(BaseHTTPRequestHandler):
             "clientDataJSON": b64u(client_data("webauthn.get", challenge, origin)),
             "authenticatorData": b64u(bytes(assertion.auth_data)),
             "signature": b64u(assertion.signature),
+            "authenticatorData": b64u(bytes(assertion.auth_data)),
             "userHandle": b64u(assertion.user["id"]) if assertion.user else None,
             "flags": parsed["flags"],
             "sign_count": parsed["sign_count"],

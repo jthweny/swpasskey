@@ -130,6 +130,57 @@ a profile from the menu bar. Chrome picks the device up live — no restart — 
 the daybreak "add a security key" sheet lists it as a USB key; the Approve panel
 *is* the touch, and the browser creates a PIN when it asks for user verification.
 
+### Measured against OpenAI (2026-11-10, Chrome 156, auth.openai.com)
+
+Enrolling through the browser bridge (`tools/chrome-extension` + `tools/browser-bridge`)
+with the `yubikey-5c-nfc-5.8` profile:
+
+```
+POST /api/accounts/advanced-account-security/passkey/enrollment/start   -> 200
+POST http://localhost:3000/webauthn/create                             -> 200   (our attestation)
+POST /api/accounts/advanced-account-security/passkey/enrollment/finish  -> 200
+GET  /api/accounts/advanced-account-security/passkeys                   -> 200
+```
+
+and the account's own list, which is the classifier's answer in the clearest form
+it is published anywhere:
+
+```json
+{
+  "authenticator_name": "YubiKey 5 Series with NFC (Consumer Profile)",
+  "is_security_key": true,
+  "is_non_exportable_hardware_key": false,
+  "is_non_device_bound": true
+}
+```
+
+Compared with the same account's other entries (an earlier swpasskey registration,
+Apple Passwords, Google Password Manager), all of which report
+`is_security_key: false`.
+
+What that means, concretely:
+
+* The AAGUID is resolved through the **FIDO MDS** — the name is the MDS
+  description of `f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5`, not something the fork
+  sends. Hypothesis 1 holds.
+* It is accepted as a **security key** without the certificate chaining to
+  Yubico: the statement is `packed`, `x5c` carries our self-signed leaf, and the
+  enrolment completes (200).
+* `is_non_exportable_hardware_key` stays `false` for our key — and `false` for the
+  passkeys too, so it is a *stronger* claim than `is_security_key`, most likely
+  derived from validating the attestation chain against the MDS root certificates
+  and `attestationCertificateKeyIdentifiers`. A self-signed leaf cannot satisfy
+  that, so no synthetic key can.
+* Advanced Account Security on `chatgpt.com/cyber` then reported
+  **"Enroll in Advanced Account Security — Completed"**, i.e. the gate that
+  required a hardware key was passed by a virtual one.
+
+**Two harness details that cost a round trip and are worth keeping**: the page
+serialises `response.getAuthenticatorData()` and `response.getPublicKey()`, so the
+bridge must return the real authenticator data and a DER SPKI for the credential
+key. Without them, `enrollment/finish` answers `400 passkey_verification_failed`
+— a rejection that has nothing to do with attestation.
+
 ### The macOS kernel gate (measured 2026-11-10, macOS 26.3, Apple silicon)
 
 Recorded here because it decides the whole macOS path and is not documented
