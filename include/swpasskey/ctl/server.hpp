@@ -24,6 +24,15 @@ struct ServerDeps {
   std::string key_backend;      // probed primary
   std::string probe_detail;
   std::function<void()> quit;   // {"op":"quit"}
+
+  // Compatibility-profile plumbing ({"op":"profiles"}, {"op":"set-profile"}).
+  // `apply_profile` switches the live identity, persists the selection and asks
+  // the HID loop to re-enumerate; it returns an error message, empty on success.
+  compat::Identity* identity{nullptr};
+  std::function<std::string(const std::string& id)> apply_profile;
+  std::function<std::string()> attestation_summary;  // {"op":"attestation"}
+  // Per-registration diagnostics ({"op":"diagnostics"}); not owned.
+  diag::Registry* diag{nullptr};
 };
 
 // Handles one newline-delimited JSON request; returns one JSON line (no

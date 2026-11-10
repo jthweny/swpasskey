@@ -21,6 +21,8 @@ public:
   JsonWriter& num(std::string_view key, std::uint64_t v);
   JsonWriter& boolean(std::string_view key, bool v);
   JsonWriter& object(std::string_view key);  // begin nested object
+  // Appends an already-encoded JSON value (object/array) as the next element.
+  JsonWriter& raw(std::string_view json);
   std::string finish();
 
 private:

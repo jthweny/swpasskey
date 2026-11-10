@@ -23,6 +23,11 @@ using Entry = std::pair<std::vector<std::uint8_t>, std::vector<std::uint8_t>>;
 // authData flag bits (WebAuthn L3 §6.1).
 inline constexpr std::uint8_t kFlagUp = 0x01;
 inline constexpr std::uint8_t kFlagUv = 0x04;
+// Backup eligibility / backup state. Always 0 here: the credential is
+// device-bound. A set bit would advertise a *synced* passkey, which is exactly
+// the classification this fork is trying to distinguish itself from.
+inline constexpr std::uint8_t kFlagBe = 0x08;
+inline constexpr std::uint8_t kFlagBs = 0x10;
 inline constexpr std::uint8_t kFlagAt = 0x40;
 inline constexpr std::uint8_t kFlagEd = 0x80;
 

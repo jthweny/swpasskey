@@ -1,5 +1,6 @@
 #include "swpasskey/ctl/server.hpp"
 
+#include "swpasskey/compat/profile.hpp"
 #include "swpasskey/ctl/json.hpp"
 #include "swpasskey/daemon/paths.hpp"
 #include "swpasskey/log/log.hpp"
@@ -97,6 +98,29 @@ std::string status_name(Status s) {
 }  // namespace
 
 std::filesystem::path default_socket_path() { return daemon::default_runtime_dir() / "ctl.sock"; }
+
+std::string profile_json(const compat::CompatProfile& p, const std::string& current) {
+  JsonWriter w;
+  char vid[8];
+  char pid[8];
+  char bcd[8];
+  std::snprintf(vid, sizeof vid, "0x%04x", static_cast<unsigned>(p.vid));
+  std::snprintf(pid, sizeof pid, "0x%04x", static_cast<unsigned>(p.pid));
+  std::snprintf(bcd, sizeof bcd, "0x%04x", static_cast<unsigned>(p.bcd_device));
+  w.begin_object()
+      .str("id", p.id)
+      .str("name", p.name)
+      .str("aaguid", p.aaguid_str)
+      .str("vid", vid)
+      .str("pid", pid)
+      .str("bcd_device", bcd)
+      .str("manufacturer", p.manufacturer)
+      .str("product", p.product)
+      .boolean("current", p.id == current)
+      .str("note", p.note)
+      .end_object();
+  return w.finish();
+}
 
 std::string stats_json(ServerDeps& deps) {
   JsonWriter w;
@@ -208,6 +232,67 @@ std::string handle_request(std::string_view line, ServerDeps& deps) {
     JsonWriter w;
     w.begin_object().boolean("ok", true).end_object();
     return w.finish();
+  }
+  if (op == "profiles") {
+    std::string current;
+    if (deps.identity != nullptr) {
+      if (auto p = deps.identity->profile(); p) {
+        current = p->id;
+      }
+    }
+    JsonWriter w;
+    w.begin_object().boolean("ok", true).str("current", current).begin_array("profiles");
+    for (const auto& p : compat::all_profiles()) {
+      w.raw(profile_json(p, current));
+    }
+    w.end_array().end_object();
+    return w.finish();
+  }
+  if (op == "set-profile") {
+    if (!deps.apply_profile) {
+      return error_json("no authenticator");
+    }
+    const std::string id = req.get("profile");
+    if (id.empty()) {
+      return error_json("profile is required");
+    }
+    const std::string err = deps.apply_profile(id);
+    if (!err.empty()) {
+      return error_json(err);
+    }
+    JsonWriter w;
+    w.begin_object().boolean("ok", true).str("profile", id).end_object();
+    return w.finish();
+  }
+  if (op == "attestation") {
+    JsonWriter w;
+    w.begin_object().boolean("ok", true);
+    w.str("summary", deps.attestation_summary ? deps.attestation_summary() : "unavailable");
+    w.end_object();
+    return w.finish();
+  }
+  if (op == "diagnostics") {
+    if (deps.diag == nullptr) {
+      return error_json("no diagnostics registry");
+    }
+    const std::string out = req.get("out");
+    if (!out.empty()) {
+      if (auto r = deps.diag->export_to(out); !r) {
+        return error_json("cannot write " + out, r.error());
+      }
+      JsonWriter w;
+      w.begin_object().boolean("ok", true).str("path", out);
+      w.num("count", static_cast<std::uint64_t>(deps.diag->entries().size())).end_object();
+      return w.finish();
+    }
+    auto body = deps.diag->to_json();
+    if (!body) {
+      return error_json("cannot render diagnostics", body.error());
+    }
+    // Splice "ok":true into the registry document instead of rebuilding it.
+    std::string json = *body;
+    json.insert(1, "\"ok\":true,");
+    return json;
   }
   if (op == "log-level") {
     const std::string lvl = req.get("level");

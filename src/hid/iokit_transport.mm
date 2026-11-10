@@ -134,6 +134,19 @@ public:
 
   std::string describe() const override { return "IOHIDUserDevice"; }
 
+  // A profile switch cannot mutate an IOHIDUserDevice's properties, so the
+  // device is torn down and rebuilt with the new strings. Runs on the HID I/O
+  // thread: no read() is in flight, and close() drains the cancel handler.
+  Result<void> rebind(const DeviceConfig& cfg) override {
+    close();
+    cfg_ = cfg;
+    {
+      std::lock_guard<std::mutex> lk(mu_);
+      inbox_.clear();
+    }
+    return open();
+  }
+
 private:
   void on_set_report(std::span<const std::uint8_t> data) {
     Report r{};

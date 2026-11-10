@@ -39,6 +39,13 @@ public:
   virtual Result<void> write(std::span<const std::uint8_t, kReportSize> report) = 0;
   // Human-readable node name for logs ("/dev/hidraw3", "IOHIDUserDevice"), may be empty.
   virtual std::string describe() const { return {}; }
+  // Re-enumerate with a new identity (VID/PID/product/serial) after a runtime
+  // profile switch. Called from the HID I/O thread only, between read() calls,
+  // so implementations may close and recreate the device in place. The default
+  // refuses: transports that cannot change identity keep the current one.
+  virtual Result<void> rebind(const DeviceConfig& /*cfg*/) {
+    return std::unexpected(Status::UnsupportedOption);
+  }
 };
 
 // Platform transport: UHID on Linux, IOHIDUserDevice on macOS. Returns

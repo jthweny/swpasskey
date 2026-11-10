@@ -62,6 +62,47 @@ bool Loop::write_all(std::vector<hid::Report> reports) {
   return true;
 }
 
+void Loop::request_identity_rebind(hid::DeviceConfig cfg) {
+  std::lock_guard<std::mutex> lk(rebind_mu_);
+  pending_rebind_ = std::move(cfg);
+}
+
+// Runs on the I/O thread, between read() calls. The in-flight CID is dropped
+// because the host will re-issue INIT against the re-enumerated device.
+bool Loop::apply_pending_rebind() {
+  std::optional<hid::DeviceConfig> cfg;
+  {
+    std::lock_guard<std::mutex> lk(rebind_mu_);
+    if (!pending_rebind_.has_value()) {
+      return true;
+    }
+    cfg = std::move(pending_rebind_);
+    pending_rebind_.reset();
+  }
+  {
+    std::lock_guard<std::mutex> lk(mu_);
+    inflight_.cmd.reset();
+    inflight_.token.reset();
+    outbox_.clear();
+  }
+  if (auto r = transport_.rebind(*cfg); !r) {
+    // Not fatal: the CTAP identity (AAGUID, attestation subject) is already
+    // switched, and transports that cannot change identity (the development
+    // socket) keep serving on their existing node. A genuinely dead transport
+    // is caught by the next read().
+    log::warn("hid_rebind_unsupported",
+              {{"product", cfg->product},
+               {"status", std::to_string(static_cast<int>(r.error()))},
+               {"hint", "the USB descriptor keeps its previous values"}});
+    return true;
+  }
+  log::info("hid_rebound", {{"product", cfg->product},
+                            {"serial", cfg->serial},
+                            {"vid", std::to_string(cfg->vid)},
+                            {"pid", std::to_string(cfg->pid)}});
+  return true;
+}
+
 void Loop::worker_main() {
   for (;;) {
     ctap::Message msg;
@@ -149,7 +190,13 @@ bool Loop::run() {
       }
     }
 
-    // 3. Read with a bounded wait.
+    // 3. Re-enumerate when the operator switched compatibility profile.
+    if (!apply_pending_rebind()) {
+      healthy = false;
+      break;
+    }
+
+    // 4. Read with a bounded wait.
     const auto timeout = busy_cid                ? kBusyPoll
                          : device_.assembling()  ? kAssemblingPoll
                                                  : kIdlePoll;
@@ -163,7 +210,7 @@ bool Loop::run() {
       continue;
     }
 
-    // 4. Ingest under the lock so the busy/idle decision cannot race with a
+    // 5. Ingest under the lock so the busy/idle decision cannot race with a
     //    worker completion. ingest() never blocks or does I/O.
     std::vector<hid::Report> replies;
     {

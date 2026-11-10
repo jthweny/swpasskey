@@ -28,6 +28,10 @@ struct MenuBarDeps {
   std::function<void()> quit;
   std::string version;
   std::string key_backend;  // human label, e.g. "Secure Enclave"
+  // Selected compatibility profile, "name (aaguid)" for the About pane. The
+  // live value is read from the control socket ("profiles"), so a switch made
+  // by `swpasskeyctl` shows up in the menu too.
+  std::string profile_label;
   std::string serial;
   std::string store_path;
   std::string ctl_socket;

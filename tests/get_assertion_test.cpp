@@ -114,8 +114,8 @@ TEST_CASE("getAssertion UP deny / timeout / cancel / uv option", "[ga]") {
   REQUIRE(rig.call(get_assert_request(o)).error() == Status::UserActionTimeout);
   rig.tok.cancel();
   REQUIRE(rig.auth->handle_cbor(get_assert_request(o), rig.tok).error() == Status::KeepaliveCancel);
-  o.uv = true;
-  REQUIRE(rig.call(get_assert_request(o)).error() == Status::InvalidOption);
+  o.uv = true;  // no PIN yet: the host is told to create one
+  REQUIRE(rig.call(get_assert_request(o)).error() == Status::PinNotSet);
   o = {};
   o.pin_auth = bytes({1});
   o.pin_protocol = 2;

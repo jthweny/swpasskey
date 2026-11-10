@@ -149,8 +149,12 @@ Result<std::vector<std::uint8_t>> Authenticator::cmd_make_credential(
   if (q->options.rk.has_value() && !*q->options.rk) {
     return fail(Status::UnsupportedOption);
   }
-  if (q->options.uv.has_value() && *q->options.uv) {
-    return fail(Status::InvalidOption);
+  // uv=true is the security-key path: user verification through PIN protocol 2.
+  // With no PIN set the host is told to create one (Chrome shows its "set a PIN"
+  // dialog); with a PIN set but no pinUvAuthParam the answer is PUAT_REQUIRED
+  // (check_pin_auth does that below).
+  if (q->options.uv.has_value() && *q->options.uv && !pin_set()) {
+    return fail(Status::PinNotSet);
   }
   if (q->ext.cred_protect.has_value() && *q->ext.cred_protect > 1) {
     return fail(Status::UnsupportedExtension);  // K27: fail closed
@@ -278,36 +282,66 @@ Result<std::vector<std::uint8_t>> Authenticator::cmd_make_credential(
   if (!ext_out.empty()) {
     flags |= detail::kFlagEd;
   }
-  const auto att = detail::build_attested_credential_data(cfg_.aaguid, c.cred_id, c.pub);
+  const auto att = detail::build_attested_credential_data(current_aaguid(), c.cred_id, c.pub);
   const auto auth_data = detail::build_auth_data(rp_id_hash, flags, c.sign_count, att, ext_out);
 
-  // Packed self-attestation: sign(authData || clientDataHash) with the credential key.
+  // Packed attestation. sign(authData || clientDataHash) with the batch
+  // attestation key and ship its certificate in x5c, which is what a hardware
+  // security key does and what a relying party's classifier looks at. Falls
+  // back to upstream self-attestation (credential key, no x5c) when no batch
+  // key or chain is available: a registration that only produces the weaker
+  // attestation still succeeds, and the diagnostics record says why.
   std::vector<std::uint8_t> to_sign(auth_data);
   to_sign.insert(to_sign.end(), q->client_data_hash.begin(), q->client_data_hash.end());
-  auto sig = (*key)->sign_der(to_sign);
-  if (!sig) {
-    log::error("sign_failed", {{"backend", primary_backend_name()}});
-    return fail(Status::Other);
+
+  const PackedAttestation* att_material = nullptr;
+  const auto prof = profile();
+  if (cfg_.attestation_mode == AttestationMode::packed_x5c && attester_ && prof) {
+    att_material = attester_->for_profile(*prof);
+  }
+  std::vector<std::uint8_t> sig;
+  if (att_material != nullptr) {
+    auto s = sign_attestation(*att_material, software_, to_sign);
+    if (!s) {
+      log::error("attestation_sign_failed", {{"source", att_material->source}});
+      return fail(Status::Other);
+    }
+    sig = std::move(*s);
+  } else {
+    auto s = (*key)->sign_der(to_sign);
+    if (!s) {
+      log::error("sign_failed", {{"backend", primary_backend_name()}});
+      return fail(Status::Other);
+    }
+    sig = std::move(*s);
   }
 
-  std::vector<Entry> att_stmt;
-  att_stmt.emplace_back(Writer::encode_tstr("alg"), Writer::encode_int(-7));
-  att_stmt.emplace_back(Writer::encode_tstr("sig"), Writer::encode_bstr(*sig));
-  Writer aw;
-  aw.write_map(std::move(att_stmt));
+  const bool x5c_present = att_material != nullptr && !att_material->chain.empty();
+  std::span<const std::vector<std::uint8_t>> chain;
+  if (x5c_present) {
+    chain = att_material->chain;
+  }
+  const auto att_stmt_cbor = encode_packed_att_stmt(sig, chain);
 
   std::vector<Entry> resp;
   resp.emplace_back(Writer::encode_uint(1), Writer::encode_tstr("packed"));
   resp.emplace_back(Writer::encode_uint(2), Writer::encode_bstr(auth_data));
-  resp.emplace_back(Writer::encode_uint(3), aw.finish());
+  resp.emplace_back(Writer::encode_uint(3), att_stmt_cbor);
   Writer w;
   w.write_map(std::move(resp));
+
+  record_registration(c, flags, x5c_present ? att_material : nullptr, x5c_present);
 
   {
     std::lock_guard<std::mutex> lk(metrics_mu_);
     ++metrics_.make_cred_ok;
   }
-  log::info("make_credential", {{"rp", c.rp_id}, {"key_backend", primary_backend_name()}});
+  log::info("make_credential",
+            {{"rp", c.rp_id},
+             {"key_backend", primary_backend_name()},
+             {"aaguid", compat::aaguid_to_string(current_aaguid())},
+             {"attestation", att_material != nullptr ? att_material->source
+                                                     : "self-attestation-no-x5c"}});
   return w.finish();
 }
 

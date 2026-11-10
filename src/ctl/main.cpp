@@ -24,6 +24,10 @@ constexpr const char* kUsage =
     "  reset                Factory reset (the daemon asks for user presence)\n"
     "  set-pin              Set the CTAP PIN (prompts; daemon asks for presence)\n"
     "  stats                Counters, key backend, per-backend credential counts\n"
+    "  profiles             Compatibility profiles and the selected one\n"
+    "  set-profile <id>     Switch the presented authenticator (re-enumerates USB)\n"
+    "  attestation          Subject/issuer/SPKI digest of the attestation leaf\n"
+    "  diagnostics [path]   Per-registration JSON (default: the daemon's export)\n"
     "  log-level <lvl>      error | warn | info | debug\n"
     "  quit                 Stop the daemon\n"
     "\n"
@@ -144,7 +148,8 @@ int main(int argc, char** argv) {
   }
   const std::string& cmd = args[0];
   std::string line;
-  if (cmd == "list" || cmd == "stats" || cmd == "reset" || cmd == "quit") {
+  if (cmd == "list" || cmd == "stats" || cmd == "reset" || cmd == "quit" ||
+      cmd == "profiles" || cmd == "attestation") {
     line = "{\"op\":\"" + cmd + "\"}";
   } else if (cmd == "delete") {
     if (args.size() < 2) {
@@ -152,6 +157,15 @@ int main(int argc, char** argv) {
       return 2;
     }
     line = "{\"op\":\"delete\",\"cred_id\":" + json_str(args[1]) + "}";
+  } else if (cmd == "set-profile") {
+    if (args.size() < 2) {
+      std::fputs("swpasskeyctl: set-profile needs a profile id (see 'profiles')\n", stderr);
+      return 2;
+    }
+    line = "{\"op\":\"set-profile\",\"profile\":" + json_str(args[1]) + "}";
+  } else if (cmd == "diagnostics") {
+    line = args.size() >= 2 ? "{\"op\":\"diagnostics\",\"out\":" + json_str(args[1]) + "}"
+                            : "{\"op\":\"diagnostics\"}";
   } else if (cmd == "log-level") {
     if (args.size() < 2) {
       std::fputs("swpasskeyctl: log-level needs error|warn|info|debug\n", stderr);

@@ -159,6 +159,13 @@ public:
 
   std::string describe() const override { return kUhidPath; }
 
+  // Destroy the uhid node and create a new one with the switched identity.
+  Result<void> rebind(const DeviceConfig& cfg) override {
+    close();
+    cfg_ = cfg;
+    return open();
+  }
+
 private:
   static Report to_report(std::span<const std::uint8_t> data) {
     Report r{};

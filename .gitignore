@@ -14,3 +14,18 @@ CMakeUserPresets.json
 packaging/macos/embedded.provisionprofile
 __pycache__/
 *.pyc
+
+# Secrets: never commit attestation material, chains or signing assets.
+/tools/webauthn-probe/certs/
+/tools/webauthn-probe/registrations.jsonl
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.csr
+*.mobileprovision
+*.provisionprofile
+attestation.key
+diagnostics.json
+!packaging/macos/swpasskeyd*.entitlements

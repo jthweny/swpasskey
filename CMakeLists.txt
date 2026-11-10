@@ -49,12 +49,20 @@ swpk_lib(swpasskey_log src/log/log.cpp)
 # --- cbor -------------------------------------------------------------------
 swpk_lib(swpasskey_cbor src/cbor/cbor.cpp)
 
+# --- compat (profiles + registration diagnostics) ---------------------------
+swpk_lib(swpasskey_compat
+  src/compat/profile.cpp
+  src/compat/store.cpp
+  src/diag/registry.cpp)
+target_link_libraries(swpasskey_compat PUBLIC swpasskey_log)
+
 # --- crypto -----------------------------------------------------------------
 include(cmake/FindTss2.cmake)
 set(SWPK_CRYPTO_SOURCES
   src/crypto/openssl_provider.cpp
   src/crypto/software_key_backend.cpp
   src/crypto/self_signed_cert.cpp
+  src/crypto/pem.cpp
   src/crypto/probe.cpp)
 if(APPLE)
   list(APPEND SWPK_CRYPTO_SOURCES src/crypto/se_key_backend.mm)
@@ -122,7 +130,7 @@ else()
   endif()
 endif()
 swpk_lib(swpasskey_ui ${SWPK_UI_SOURCES})
-target_link_libraries(swpasskey_ui PUBLIC swpasskey_log swpasskey_store Threads::Threads)
+target_link_libraries(swpasskey_ui PUBLIC swpasskey_log swpasskey_store swpasskey_compat Threads::Threads)
 if(APPLE)
   set_source_files_properties(src/ui/presence_macos.mm src/ui/menubar_macos.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
   target_link_libraries(swpasskey_ui PUBLIC
@@ -146,9 +154,10 @@ swpk_lib(swpasskey_ctap
   src/ctap/get_assertion.cpp
   src/ctap/client_pin.cpp
   src/ctap/hmac_secret.cpp
+  src/ctap/attestation.cpp
   src/ctap/u2f.cpp)
 target_link_libraries(swpasskey_ctap PUBLIC
-  swpasskey_crypto swpasskey_store swpasskey_cbor swpasskey_ui swpasskey_log)
+  swpasskey_crypto swpasskey_store swpasskey_cbor swpasskey_compat swpasskey_ui swpasskey_log)
 swpasskey_disable_exceptions(swpasskey_ctap)
 if(SWPASSKEY_ENABLE_U2F)
   # PUBLIC so the daemon (via swpasskey_daemon) sees it and can default
@@ -205,6 +214,9 @@ add_executable(swpasskey_tests
   tests/make_credential_test.cpp
   tests/get_assertion_test.cpp
   tests/packed_self_attest_golden_test.cpp
+  tests/compat_profile_test.cpp
+  tests/attestation_test.cpp
+  tests/diag_registry_test.cpp
   tests/u2f_test.cpp
   tests/store_test.cpp
   tests/pin_test.cpp

@@ -23,6 +23,9 @@ struct GetInfoSnapshot {
     bool plat{false};
     bool rk{true};
     bool up{true};
+    // "uv": the authenticator can perform user verification (PIN protocol 2).
+    // Emitted only when set so the pinned getInfo goldens keep their shape.
+    std::optional<bool> uv;
   } options;
   std::uint32_t max_msg_size{1200};
   std::vector<std::uint8_t> pin_protocols;  // empty until PIN lands; then {2}

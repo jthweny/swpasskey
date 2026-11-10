@@ -6,7 +6,9 @@ using namespace swpk;
 using namespace swpk::test;
 
 TEST_CASE("makeCredential: packed self-attestation verifies, rk stored", "[mc]") {
-  Rig rig;
+  // Upstream mode: the credential key signs and no x5c is emitted. The fork's
+  // default (attestation certificate in x5c) is covered by attestation_test.cpp.
+  Rig rig(false, false, ctap::AttestationMode::self_only);
   MakeCredOpts o;
   for (std::size_t i = 0; i < 32; ++i) o.client_data_hash[i] = static_cast<std::uint8_t>(i);
   auto r = rig.call(make_cred_request(o));
@@ -73,8 +75,8 @@ TEST_CASE("makeCredential option policy", "[mc]") {
   o.rk = false;
   REQUIRE(rig.call(make_cred_request(o)).error() == Status::UnsupportedOption);
   o = {};
-  o.uv = true;
-  REQUIRE(rig.call(make_cred_request(o)).error() == Status::InvalidOption);
+  o.uv = true;  // no PIN yet: the host is told to create one
+  REQUIRE(rig.call(make_cred_request(o)).error() == Status::PinNotSet);
   o = {};
   o.cred_protect = 3;
   REQUIRE(rig.call(make_cred_request(o)).error() == Status::UnsupportedExtension);

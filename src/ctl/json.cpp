@@ -46,6 +46,12 @@ void JsonWriter::write_str(std::string_view v) {
   out_.push_back('"');
 }
 
+JsonWriter& JsonWriter::raw(std::string_view json) {
+  sep();
+  out_ += json;
+  return *this;
+}
+
 JsonWriter& JsonWriter::begin_object() {
   sep();
   out_.push_back('{');

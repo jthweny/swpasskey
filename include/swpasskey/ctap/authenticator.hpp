@@ -1,17 +1,21 @@
 #pragma once
 
+#include "swpasskey/compat/profile.hpp"
 #include "swpasskey/constants.hpp"
 #include "swpasskey/crypto/key_backend.hpp"
 #include "swpasskey/crypto/provider.hpp"
+#include "swpasskey/ctap/attestation.hpp"
 #include "swpasskey/ctap/cancel_token.hpp"
 #include "swpasskey/ctap/get_info.hpp"
 #include "swpasskey/ctap/request_handler.hpp"
+#include "swpasskey/diag/registry.hpp"
 #include "swpasskey/status.hpp"
 #include "swpasskey/store/credential.hpp"
 #include "swpasskey/ui/presence.hpp"
 
 #include <array>
 #include <chrono>
+#include <filesystem>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -33,8 +37,23 @@ inline constexpr std::uint8_t kCmdGetNextAssertion = 0x08;
 // more than one is plugged in ("touch the key you want to use").
 inline constexpr std::uint8_t kCmdAuthenticatorSelection = 0x0B;
 
+// How makeCredential attests. `packed_x5c` is the security-key presentation the
+// compatibility experiment needs; `self_only` is upstream behaviour (no x5c).
+enum class AttestationMode : std::uint8_t { self_only, packed_x5c };
+
 struct AuthenticatorConfig {
   std::array<std::uint8_t, 16> aaguid{kAaguid};
+  // Selected identity. When set it overrides `aaguid` and supplies the
+  // attestation certificate subject for every operation.
+  std::shared_ptr<compat::Identity> identity;
+  AttestationMode attestation_mode{AttestationMode::packed_x5c};
+  // 32-byte batch attestation scalar (0600). Empty keeps it in memory only,
+  // which is what tests and --testing runs want.
+  std::filesystem::path attestation_key_path;
+  // Optional real attestation chain (leaf.pem, leaf.key, chain.pem).
+  std::optional<std::filesystem::path> attestation_chain_dir;
+  // Optional per-registration diagnostics sink (not owned).
+  diag::Registry* diag{nullptr};
   std::chrono::milliseconds up_timeout{kUserActionTimeout};
   bool u2f_enabled{false};  // PR11
   // PIN protocol: base delay after 3 consecutive failures (5 s, 10 s, ... cap 60 s)
@@ -77,6 +96,16 @@ public:
   GetInfoSnapshot get_info() const;
   AuthenticatorMetrics metrics() const;
   const char* primary_backend_name() const;
+
+  // Switches the presented identity at runtime (control socket). The AAGUID in
+  // getInfo and the attestation certificate subject follow immediately; the
+  // already-stored credentials keep signing, because they are keyed by RP, not
+  // by profile. Serialised against CTAP traffic by the operation lock.
+  void set_profile(const compat::CompatProfile& profile);
+  std::shared_ptr<const compat::CompatProfile> profile() const;
+
+  // "subject=… issuer=… source=… sha256=…" for the control socket.
+  std::string attestation_summary();
 
   // Control-socket entry points (PR12). Serialised against handle_cbor by an
   // internal mutex; `reset` and `set_pin` still require local UP.
@@ -127,10 +156,19 @@ private:
                               std::span<const std::uint8_t, 32> rp_id_hash, bool is_make,
                               CancelToken& cancel);
 
+  // Whether a clientPIN is configured. UV requests can only be answered once it
+  // is: PIN_NOT_SET tells the host to walk the user through creating one.
+  bool pin_set() const;
+
   // hmac-secret (CTAP 2.1): returns the encrypted extension output for this
   // credential, selecting CredRandomWithUV / WithoutUV by `uv`.
   Result<std::vector<std::uint8_t>> hmac_secret_output(const store::Credential& cred,
                                                        const detail::ExtensionsIn& ext, bool uv);
+  // AAGUID to put in attested credential data: the selected profile when one is
+  // configured, else the static config value (tests).
+  std::array<std::uint8_t, 16> current_aaguid() const;
+  void record_registration(const store::Credential& cred, std::uint8_t flags,
+                           const PackedAttestation* att, bool x5c_present);
   crypto::KeyBackend* backend_for(crypto::BackendKind kind);
 
   Result<std::unique_ptr<crypto::SigningKey>> load_key(const store::Credential& cred);
@@ -149,6 +187,7 @@ private:
   std::mutex op_mu_;  // one CTAP/U2F/ctl operation at a time
   std::unique_ptr<detail::AssertionState> next_state_;
   std::unique_ptr<detail::PinManager> pin_;
+  std::unique_ptr<BatchAttester> attester_;
 };
 
 }  // namespace swpk::ctap

@@ -56,7 +56,14 @@ Authenticator::Authenticator(AuthenticatorConfig cfg, crypto::Provider& crypto,
       store_(store),
       presence_(presence),
       pin_(std::make_unique<detail::PinManager>(crypto, store, cfg.pin_failure_delay_base,
-                                                cfg.pin_token_idle_timeout)) {}
+                                                cfg.pin_token_idle_timeout)) {
+  attester_ = std::make_unique<BatchAttester>(crypto, cfg.attestation_key_path);
+  if (cfg.attestation_chain_dir.has_value()) {
+    if (auto r = attester_->use_vendor_chain(*cfg.attestation_chain_dir); !r) {
+      log::warn("vendor_chain_unused", {{"dir", cfg.attestation_chain_dir->string()}});
+    }
+  }
+}
 
 Authenticator::~Authenticator() = default;
 
@@ -88,12 +95,123 @@ GetInfoSnapshot Authenticator::get_info() const {
     s.versions.emplace_back("U2F_V2");  // PR11; CTAP2 versions stay first
   }
   s.extensions = {"hmac-secret"};
-  s.aaguid = cfg_.aaguid;
+  s.aaguid = current_aaguid();
+  // Security-key semantics, not platform-authenticator semantics:
+  //   plat=false (a roaming key), rk=true (discoverable credentials),
+  //   uv=true  (user verification through PIN protocol 2),
+  //   clientPin always present so the host knows the capability exists.
+  // uv is a capability claim, not a bypass: an assertion only carries UV after
+  // the PIN token verified, so a key with no PIN set answers PIN_NOT_SET and
+  // the browser walks the user through creating one.
+  s.options.plat = false;
+  s.options.rk = true;
   s.options.client_pin = pin_->pin_set();
+  s.options.uv = true;
   s.options.pin_uv_auth_token = true;
   s.pin_protocols = {2};
   s.remaining_discoverable = static_cast<std::uint32_t>(store_.remaining());
   return s;
+}
+
+std::shared_ptr<const compat::CompatProfile> Authenticator::profile() const {
+  if (cfg_.identity) {
+    return cfg_.identity->profile();
+  }
+  static const std::shared_ptr<const compat::CompatProfile> kFallback =
+      std::make_shared<const compat::CompatProfile>(compat::default_profile());
+  return kFallback;
+}
+
+std::array<std::uint8_t, 16> Authenticator::current_aaguid() const {
+  if (cfg_.identity) {
+    auto p = cfg_.identity->profile();
+    if (p) {
+      return p->aaguid;
+    }
+  }
+  return cfg_.aaguid;
+}
+
+void Authenticator::set_profile(const compat::CompatProfile& profile) {
+  std::lock_guard<std::mutex> lk(op_mu_);
+  cfg_.aaguid = profile.aaguid;
+  if (!cfg_.identity) {
+    cfg_.identity = std::make_shared<compat::Identity>();
+  }
+  cfg_.identity->set(std::make_shared<const compat::CompatProfile>(profile));
+  if (attester_) {
+    attester_->invalidate();  // the leaf names the previous model
+  }
+  char vid[8];
+  std::snprintf(vid, sizeof vid, "0x%04x", static_cast<unsigned>(profile.vid));
+  log::warn("profile_switched",
+            {{"profile", profile.id},
+             {"aaguid", profile.aaguid_str},
+             {"vid", vid},
+             {"note", "credentials are kept; reset them to emulate a fresh key"}});
+}
+
+std::string Authenticator::attestation_summary() {
+  std::lock_guard<std::mutex> lk(op_mu_);
+  if (!attester_) {
+    return "unavailable";
+  }
+  const auto prof = profile();
+  const PackedAttestation* att = prof ? attester_->for_profile(*prof) : nullptr;
+  if (att == nullptr) {
+    return "unavailable";
+  }
+  std::string out = "source=" + att->source;
+  out += " profile=" + (att->profile_id.empty() ? std::string("vendor-chain") : att->profile_id);
+  out += " der_len=" + std::to_string(att->chain.empty() ? 0 : att->chain.front().size());
+  out += " chain=" + std::to_string(att->chain.size());
+  out += " subject=" + att->subject;
+  out += " issuer=" + att->issuer;
+  out += " sha256=" + att->leaf_sha256;
+  return out;
+}
+
+void Authenticator::record_registration(const store::Credential& cred, std::uint8_t flags,
+                                        const PackedAttestation* att, bool x5c_present) {
+  if (cfg_.diag == nullptr) {
+    return;
+  }
+  const auto prof = profile();
+  diag::RegistrationRecord r;
+  r.profile_id = prof ? prof->id : "unknown";
+  r.profile_name = prof ? prof->name : "unknown";
+  r.aaguid = prof ? prof->aaguid_str : compat::aaguid_to_string(current_aaguid());
+  r.rp_id = cred.rp_id;
+  r.cred_id_hex = [&] {
+    std::string s;
+    for (auto b : cred.cred_id) {
+      char buf[3];
+      std::snprintf(buf, sizeof buf, "%02x", static_cast<unsigned>(b));
+      s += buf;
+    }
+    return s;
+  }();
+  r.attestation_format = "packed";
+  r.x5c_present = x5c_present;
+  if (att != nullptr) {
+    r.attestation_source = att->source;
+    r.x5c_len = att->chain.size();
+    r.x5c_subject = att->subject;
+    r.x5c_issuer = att->issuer;
+    r.x5c_leaf_sha256 = att->leaf_sha256;
+  } else {
+    r.attestation_source = "none";
+  }
+  r.flag_up = (flags & detail::kFlagUp) != 0;
+  r.flag_uv = (flags & detail::kFlagUv) != 0;
+  r.flag_be = (flags & detail::kFlagBe) != 0;
+  r.flag_bs = (flags & detail::kFlagBs) != 0;
+  r.flag_at = (flags & detail::kFlagAt) != 0;
+  r.flag_ed = (flags & detail::kFlagEd) != 0;
+  r.sign_count = cred.sign_count;
+  r.key_backend = primary_backend_name();
+  r.timestamp = diag::iso8601_now();
+  cfg_.diag->record(std::move(r));
 }
 
 Result<std::vector<std::uint8_t>> Authenticator::cmd_get_info() {
@@ -136,6 +254,8 @@ ui::Decision Authenticator::confirm_up(ui::PresenceRequest::Kind kind, const std
   }
   return d;
 }
+
+bool Authenticator::pin_set() const { return pin_ != nullptr && pin_->pin_set(); }
 
 Result<bool> Authenticator::check_pin_auth(const PinAuthIn& in,
                                            std::span<const std::uint8_t, 32> client_data_hash,

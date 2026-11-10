@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daybreak attestation probe</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfaf7;
+    --fg: #1d1c1a;
+    --muted: #6b6862;
+    --line: #e2ded6;
+    --accent: #2f5d50;
+    --bad: #8c2f2f;
+    --good: #2f5d50;
+    --card: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a;
+      --fg: #eceae5;
+      --muted: #9c9890;
+      --line: #2b2d31;
+      --accent: #8fd0bd;
+      --bad: #e08b8b;
+      --good: #8fd0bd;
+      --card: #1d1f23;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.55 ui-serif, Georgia, "Iowan Old Style", serif;
+  }
+  main { max-width: 62rem; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  p.lede { color: var(--muted); margin: 0 0 1.75rem; max-width: 46rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.5rem; }
+  button {
+    font: inherit; font-size: .95rem;
+    padding: .5rem .95rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: progress; }
+  button.primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  #status { min-height: 1.5rem; margin-bottom: 1.25rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; }
+  #status.bad { color: var(--bad); }
+  #status.good { color: var(--good); }
+  table { width: 100%; border-collapse: collapse; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
+  caption { text-align: left; padding-bottom: .4rem; color: var(--muted); font-family: ui-serif, Georgia, serif; font-size: .9rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; width: 15rem; color: var(--muted); }
+  td { word-break: break-all; }
+  .flag { display: inline-block; padding: 0 .35rem; border: 1px solid var(--line); border-radius: 4px; margin-right: .25rem; }
+  .flag.set { border-color: var(--accent); color: var(--accent); }
+  details { margin-top: 1.5rem; }
+  summary { cursor: pointer; color: var(--muted); }
+  pre { overflow-x: auto; padding: 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 6px; font-size: .75rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Daybreak attestation probe</h1>
+  <p class="lede">
+    Registers a credential with the same options Daybreak requests — cross-platform
+    attachment, discoverable, user verification required, <code>attestation: "direct"</code> —
+    and decodes what the security key actually returned. The registration is also
+    recorded server-side in <code>registrations.jsonl</code>.
+  </p>
+
+  <div class="controls">
+    <button class="primary" id="register">Register security key</button>
+    <button id="login">Sign in (discoverable)</button>
+    <button id="clear">Clear</button>
+  </div>
+  <div id="status">Idle.</div>
+
+  <table id="result" hidden>
+    <caption>Registration</caption>
+    <tbody></tbody>
+  </table>
+
+  <details id="raw" hidden>
+    <summary>Raw decoded attestation object</summary>
+    <pre></pre>
+  </details>
+
+  <details>
+    <summary>What to look for</summary>
+    <table>
+      <tbody>
+        <tr><th>x5c present</th><td>A hardware key ships its attestation certificate. A software
+          or synced passkey typically returns <code>fmt: "none"</code> or self-attestation with
+          no chain.</td></tr>
+        <tr><th>AAGUID</th><td>Must be the AAGUID the selected profile presents. This is the value
+          a relying party maps through the FIDO MDS.</td></tr>
+        <tr><th>BE / BS</th><td>Both clear means the credential is device-bound. A set BE bit means
+          the credential claims to be backup-eligible, i.e. a synced passkey.</td></tr>
+        <tr><th>UV</th><td>Must be set: the request asked for <code>userVerification: "required"</code>.</td></tr>
+        <tr><th>Flags</th><td>AT set means attested credential data is included; ED is the
+          extension-data flag.</td></tr>
+      </tbody>
+    </table>
+  </details>
+</main>
+
+<script>
+const statusEl = document.getElementById('status');
+const tableEl = document.getElementById('result');
+const rawEl = document.getElementById('raw');
+const buttons = [...document.querySelectorAll('button')];
+
+function b64uToBuf(s) {
+  const pad = '='.repeat((4 - s.length % 4) % 4);
+  const bin = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+function bufToB64u(buf) {
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = kind || '';
+}
+
+function busy(on) {
+  buttons.forEach(b => b.disabled = on);
+}
+
+function rows(pairs) {
+  const tbody = tableEl.querySelector('tbody');
+  tbody.textContent = '';
+  for (const [k, v, title] of pairs) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = k;
+    const td = document.createElement('td');
+    if (v instanceof Node) td.appendChild(v); else td.textContent = v;
+    if (title) td.title = title;
+    tr.append(th, td);
+    tbody.appendChild(tr);
+  }
+  tableEl.hidden = false;
+}
+
+function flagChips(names) {
+  const wrap = document.createElement('span');
+  for (const name of ['UP', 'UV', 'BE', 'BS', 'AT', 'ED']) {
+    const el = document.createElement('span');
+    el.className = 'flag' + (names.includes(name) ? ' set' : '');
+    el.textContent = name;
+    wrap.appendChild(el);
+  }
+  return wrap;
+}
+
+async function post(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || res.statusText);
+  return json;
+}
+
+document.getElementById('register').addEventListener('click', async () => {
+  busy(true);
+  setStatus('Waiting for the security key…');
+  try {
+    const options = await (await fetch('/options/register')).json();
+    const pk = options.publicKey;
+    pk.challenge = b64uToBuf(pk.challenge);
+    pk.user.id = b64uToBuf(pk.user.id);
+
+    const cred = await navigator.credentials.create({ publicKey: pk });
+    if (!cred) throw new Error('no credential returned');
+
+    const payload = {
+      id: cred.id,
+      rawId: bufToB64u(cred.rawId),
+      type: cred.type,
+      authenticatorAttachment: cred.authenticatorAttachment,
+      clientExtensionResults: cred.getClientExtensionResults(),
+      response: {
+        clientDataJSON: bufToB64u(cred.response.clientDataJSON),
+        attestationObject: bufToB64u(cred.response.attestationObject),
+        transports: cred.response.getTransports ? cred.response.getTransports() : [],
+      },
+    };
+    const result = await post('/register', payload);
+    const rec = result.record;
+    const ad = rec.auth_data;
+
+    setStatus(`Registered. fmt=${rec.fmt}, x5c=${rec.x5c_len}, aaguid=${ad.aaguid}`, 'good');
+    rows([
+      ['Authenticator attachment', cred.authenticatorAttachment || '(not reported)'],
+      ['Attestation format', rec.fmt],
+      ['Attestation source', rec.attestation_kind],
+      ['x5c certificates', String(rec.x5c_len)],
+      ['Certificate subject', rec.x5c[0]?.subject || '(none)'],
+      ['Certificate issuer', rec.x5c[0]?.issuer || '(none)'],
+      ['Certificate SHA-256', rec.x5c[0]?.sha256 || '(none)'],
+      ['AAGUID extension', rec.x5c[0]?.aaguid_ext || '(not present)'],
+      ['AAGUID (authData)', ad.aaguid || '(no attested credential data)'],
+      ['authData flags', flagChips(ad.flags)],
+      ['User verified (UV)', ad.flags.includes('UV') ? 'yes' : 'no'],
+      ['Backup eligible (BE)', ad.flags.includes('BE') ? 'yes — claims to be synced' : 'no — device-bound'],
+      ['Backup state (BS)', ad.flags.includes('BS') ? 'yes' : 'no'],
+      ['signCount', String(ad.sign_count)],
+      ['Credential ID', ad.credential_id || cred.id, cred.id],
+      ['Credential public key', JSON.stringify(ad.credential_public_key || {})],
+      ['credProps.rk', JSON.stringify(cred.getClientExtensionResults().credProps || {})],
+      ['Origin', rec.client_data.origin],
+    ]);
+    rawEl.hidden = false;
+    rawEl.querySelector('pre').textContent = JSON.stringify(rec, null, 2);
+  } catch (err) {
+    setStatus('Registration failed: ' + err.message, 'bad');
+  } finally {
+    busy(false);
+  }
+});
+
+document.getElementById('login').addEventListener('click', async () => {
+  busy(true);
+  setStatus('Waiting for the security key…');
+  try {
+    const options = await (await fetch('/options/login')).json();
+    const pk = options.publicKey;
+    pk.challenge = b64uToBuf(pk.challenge);
+    const assertion = await navigator.credentials.get({ publicKey: pk });
+    if (!assertion) throw new Error('no assertion returned');
+    const result = await post('/login', {
+      id: assertion.id,
+      rawId: bufToB64u(assertion.rawId),
+      type: assertion.type,
+      response: {
+        clientDataJSON: bufToB64u(assertion.response.clientDataJSON),
+        authenticatorData: bufToB64u(assertion.response.authenticatorData),
+        signature: bufToB64u(assertion.response.signature),
+        userHandle: assertion.response.userHandle ? bufToB64u(assertion.response.userHandle) : null,
+      },
+    });
+    const ad = result.record.auth_data;
+    setStatus(`Signed in. signCount=${ad.sign_count}, UV=${ad.flags.includes('UV')}`, 'good');
+    rows([
+      ['signCount', String(ad.sign_count)],
+      ['authData flags', flagChips(ad.flags)],
+      ['User handle returned', result.record.user_handle || '(none — not discoverable)'],
+      ['Signature length', String(result.record.signature_len)],
+    ]);
+    rawEl.hidden = true;
+  } catch (err) {
+    setStatus('Sign-in failed: ' + err.message, 'bad');
+  } finally {
+    busy(false);
+  }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  tableEl.hidden = true;
+  rawEl.hidden = true;
+  setStatus('Idle.');
+});
+</script>
+</body>
+</html>

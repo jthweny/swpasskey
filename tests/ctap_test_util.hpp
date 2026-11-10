@@ -13,6 +13,7 @@
 
 #include <cstring>
 #include <map>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -384,13 +385,18 @@ struct Rig {
   std::unique_ptr<ctap::Authenticator> auth;
   ctap::CancelToken tok;
 
-  explicit Rig(bool with_hw = false, bool u2f = false) {
+  explicit Rig(bool with_hw = false, bool u2f = false,
+               ctap::AttestationMode attest = ctap::AttestationMode::packed_x5c,
+               const std::function<void(ctap::AuthenticatorConfig&)>& tweak = {}) {
     if (with_hw) hw = std::make_unique<FakeHwBackend>();
     ctap::AuthenticatorConfig cfg;
+    // No key path: the batch attestation key lives in this process only.
+    cfg.attestation_mode = attest;
     cfg.up_timeout = std::chrono::milliseconds(200);
     cfg.pin_failure_delay_base = std::chrono::milliseconds(2);
     cfg.pin_token_idle_timeout = std::chrono::milliseconds(300);
     cfg.u2f_enabled = u2f;
+    if (tweak) tweak(cfg);
     auth = std::make_unique<ctap::Authenticator>(cfg, crypto, hw ? *hw : software, software, *store, presence);
   }
 

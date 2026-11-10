@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """End-to-end check of swpasskeyd with python-fido2 over the development
 socket transport (SWPASSKEY_HID_SOCKET). Exercises the real CTAPHID loop,
-keepalives, getInfo, makeCredential (packed self-attestation), getAssertion,
+keepalives, getInfo, makeCredential (packed attestation: x5c when the build
+ships an attestation certificate), getAssertion,
 getNextAssertion, and — when the daemon supports them — clientPIN protocol 2,
 hmac-secret and CTAP1/U2F.
 
@@ -29,6 +30,13 @@ from fido2.ctap2.extensions import HmacSecretExtension
 from fido2.webauthn import AttestationObject, AuthenticatorData
 from fido2.cose import ES256
 from fido2.attestation import PackedAttestation, AttestationType
+
+import uuid
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 
 class SockConn(CtapHidConnection):
@@ -110,11 +118,37 @@ def main():
     check(not (att.auth_data.flags & (AuthenticatorData.FLAG.BE | AuthenticatorData.FLAG.BS)), "BE/BS zero")
     check(att.auth_data.counter == 1, "signCount starts at 1")
     check(len(cred_data.credential_id) == 32, "32-byte credential id")
-    check("x5c" not in att.att_stmt, "self-attestation: no x5c")
-    # Verify with python-fido2's packed verifier (self attestation path).
-    ao = AttestationObject.create(att.fmt, att.auth_data, att.att_stmt)
+    # Attestation: two legitimate shapes. Upstream (no batch key) signs with the
+    # credential key and sends no x5c; the compat fork ships a profile-aware
+    # self-signed certificate in x5c.
+    if "x5c" in att.att_stmt:
+        chain = att.att_stmt["x5c"]
+        check(len(chain) >= 1, "x5c carries at least one certificate")
+        leaf = x509.load_der_x509_certificate(chain[0], default_backend())
+        print("attestation leaf: subject=%s issuer=%s" % (leaf.subject.rfc4514_string(),
+                                                          leaf.issuer.rfc4514_string()))
+        check(leaf.subject == leaf.issuer, "leaf is self-signed (no vendor chain)")
+        aaguid_ext = leaf.extensions.get_extension_for_oid(
+            x509.ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")).value.value
+        check(str(cred_data.aaguid) in str(uuid.UUID(bytes=aaguid_ext[-16:])),
+              "certificate AAGUID extension matches authData")
+        try:
+            # verify() returns None on success, so it cannot be the condition.
+            leaf.public_key().verify(att.att_stmt["sig"],
+                                     bytes(att.auth_data) + cdh,
+                                     ec.ECDSA(hashes.SHA256()))
+            sig_ok = True
+        except Exception:
+            sig_ok = False
+        check(sig_ok, "attStmt signature verifies against the x5c leaf")
+    else:
+        check("x5c" not in att.att_stmt, "self-attestation: no x5c (upstream mode)")
+    # Verify with python-fido2's packed verifier: with x5c it must classify the
+    # statement as a chain, without it as self-attestation.
+    AttestationObject.create(att.fmt, att.auth_data, att.att_stmt)
     res = PackedAttestation().verify(att.att_stmt, att.auth_data, cdh)
-    check(res.attestation_type == AttestationType.SELF, "PackedAttestation.verify -> SELF")
+    expected = AttestationType.BASIC if "x5c" in att.att_stmt else AttestationType.SELF
+    check(res.attestation_type == expected, "PackedAttestation.verify -> %s" % expected)
 
     # Second credential, other user
     user2 = {"id": b"\x05\x06", "name": "bob", "displayName": "Bob"}

@@ -1,8 +1,11 @@
+#include "swpasskey/compat/profile.hpp"
+#include "swpasskey/compat/store.hpp"
 #include "swpasskey/constants.hpp"
 #include "swpasskey/crypto/key_backend.hpp"
 #include "swpasskey/crypto/provider.hpp"
 #include "swpasskey/ctap/authenticator.hpp"
 #include "swpasskey/ctl/server.hpp"
+#include "swpasskey/diag/registry.hpp"
 #include "swpasskey/daemon/loop.hpp"
 #include "swpasskey/daemon/paths.hpp"
 #include "swpasskey/hid/transport.hpp"
@@ -40,12 +43,16 @@ constexpr std::string_view kUsage =
     "  --dek-file                     Keep the store DEK in credentials.bin.dek\n"
     "                                 (0600) instead of the OS keychain\n"
     "  --ctl-socket PATH              Control socket for swpasskeyctl\n"
+    "  --profile=ID                   Compatibility profile to present (default:\n"
+    "                                 the persisted selection, else stock)\n"
     "\n"
     "Env: SWPASSKEY_LOG=error|warn|info|debug, SWPASSKEY_TESTING=1,\n"
     "     SWPASSKEY_PRESENCE=auto|stdin|notify|alert (default auto: desktop prompt,\n"
     "                        else the tty prompt; 'stdin' forces the tty prompt),\n"
     "     SWPASSKEY_TPM_UNSAFE_NOTPMRM=1, SWPASSKEY_TPM_TCTI=<tcti> (default device:/dev/tpmrm0),\n"
-    "     SWPASSKEY_HID_SOCKET=PATH (dev: CTAPHID over a Unix socket, no HID device)\n"
+    "     SWPASSKEY_HID_SOCKET=PATH (dev: CTAPHID over a Unix socket, no HID device),\n"
+    "     SWPASSKEY_ATTEST_CHAIN=DIR (use a real attestation chain: leaf.pem,\n"
+    "                        leaf.key, optional chain.pem)\n"
     "\n"
     "This is a software authenticator. Hardware engines (TPM / Secure Enclave)\n"
     "protect private scalars from extraction, not from same-uid use. The\n"
@@ -67,6 +74,7 @@ void on_signal(int) {
 
 struct Options {
   std::string key_backend{"auto"};
+  std::string profile;  // empty = the persisted selection
   std::filesystem::path store;
   std::string presence{"auto"};
   bool testing{false};
@@ -96,6 +104,10 @@ int main(int argc, char** argv) {
     if (arg == "--version" || arg == "-V") {
       print_version();
       return 0;
+    }
+    if (arg.starts_with("--profile=")) {
+      opt.profile = std::string(arg.substr(std::strlen("--profile=")));
+      continue;
     }
     if (arg.starts_with("--key-backend=")) {
       opt.key_backend = std::string(arg.substr(std::strlen("--key-backend=")));
@@ -150,6 +162,31 @@ int main(int argc, char** argv) {
   if (!serial) {
     return 1;
   }
+
+  // Compatibility profile: the CLI flag wins, then the persisted selection, then
+  // the stock identity. Nothing here changes key custody.
+  const auto identity_path = swpk::compat::selection_path(data_dir);
+  std::string selected = opt.profile;
+  if (selected.empty()) {
+    selected = swpk::compat::load_selected_id(identity_path);
+  }
+  const swpk::compat::CompatProfile* chosen = swpk::compat::find_profile(selected);
+  if (chosen == nullptr) {
+    if (!opt.profile.empty()) {
+      std::fprintf(stderr, "swpasskeyd: unknown profile '%s' (see swpasskeyctl profiles)\n",
+                   opt.profile.c_str());
+      return 2;
+    }
+    chosen = &swpk::compat::default_profile();
+  }
+  auto identity = std::make_shared<swpk::compat::Identity>();
+  identity->set(std::make_shared<const swpk::compat::CompatProfile>(*chosen));
+  if (auto r = swpk::compat::save_selected_id(identity_path, chosen->id); !r) {
+    std::fputs("swpasskeyd: cannot persist the compatibility profile (see log)\n", stderr);
+  }
+
+  // Per-registration diagnostics, rewritten on every registration.
+  swpk::diag::Registry diag_registry(data_dir / "diagnostics.json");
 
   swpk::crypto::Provider crypto;
 
@@ -208,13 +245,30 @@ int main(int argc, char** argv) {
   }
 
   swpk::ctap::AuthenticatorConfig acfg;
+  acfg.identity = identity;
+  acfg.attestation_key_path = data_dir / "attestation.key";
+  acfg.diag = &diag_registry;
+  if (const char* chain = std::getenv("SWPASSKEY_ATTEST_CHAIN"); chain != nullptr && *chain != 0) {
+    acfg.attestation_chain_dir = std::filesystem::path(chain);
+  }
 #if defined(SWPASSKEY_ENABLE_U2F) && SWPASSKEY_ENABLE_U2F
   acfg.u2f_enabled = true;  // HID caps become CBOR|WINK; getInfo lists U2F_V2
 #endif
   swpk::ctap::Authenticator auth(acfg, crypto, *primary, software_ref, *store, *presence);
 
-  swpk::hid::DeviceConfig dcfg;
-  dcfg.serial = *serial;
+  // USB identity from the selected profile. `serial` stays derived from the
+  // stored seed, so switching profiles does not renumber the installation.
+  auto device_config_for = [&](const swpk::compat::CompatProfile& p) {
+    swpk::hid::DeviceConfig d;
+    d.vid = p.vid;
+    d.pid = p.pid;
+    d.version = p.bcd_device;
+    d.manufacturer = p.manufacturer;
+    d.product = p.product;
+    d.serial = swpk::compat::serial_for(p, *serial);
+    return d;
+  };
+  swpk::hid::DeviceConfig dcfg = device_config_for(*chosen);
   std::unique_ptr<swpk::hid::Transport> transport;
   if (const char* sock = std::getenv("SWPASSKEY_HID_SOCKET"); sock != nullptr && *sock != 0) {
     transport = swpk::hid::make_socket_transport(sock);  // development only
@@ -248,6 +302,25 @@ int main(int argc, char** argv) {
   deps.key_backend = auth.primary_backend_name();
   deps.probe_detail = probe_detail;
   deps.quit = [&loop] { loop.stop(); };
+  deps.identity = identity.get();
+  deps.diag = &diag_registry;
+  deps.attestation_summary = [&auth] { return auth.attestation_summary(); };
+  deps.apply_profile = [&](const std::string& id) -> std::string {
+    const auto* p = swpk::compat::find_profile(id);
+    if (p == nullptr) {
+      return "unknown profile: " + id;
+    }
+    auto next = std::make_shared<const swpk::compat::CompatProfile>(*p);
+    identity->set(next);
+    auth.set_profile(*p);
+    if (auto r = swpk::compat::save_selected_id(identity_path, id); !r) {
+      return "cannot persist the selection";
+    }
+    // Re-enumerate so the host and any cached WebAuthn metadata see the new
+    // USB identity; the AAGUID in getInfo changed already.
+    loop.request_identity_rebind(device_config_for(*p));
+    return {};
+  };
   swpk::ctl::UnixServer ctl(opt.ctl_socket, std::move(deps));
   if (!ctl.start()) {
     std::fputs("swpasskeyd: cannot create the control socket (see log)\n", stderr);
@@ -258,6 +331,9 @@ int main(int argc, char** argv) {
   std::signal(SIGPIPE, SIG_IGN);
 
   swpk::log::info("startup", {{"version", SWPASSKEY_VERSION},
+                              {"profile", chosen->id},
+                              {"aaguid", chosen->aaguid_str},
+                              {"attestation", auth.attestation_summary()},
                               {"key_backend", auth.primary_backend_name()},
                               {"probe", probe_detail},
                               {"transport", transport->describe()},
@@ -279,6 +355,7 @@ int main(int argc, char** argv) {
     mdeps.quit = [&loop] { loop.stop(); };
     mdeps.version = SWPASSKEY_VERSION;
     mdeps.key_backend = swpk::ui::backend_label(primary->kind());
+    mdeps.profile_label = chosen->name + " (" + chosen->aaguid_str + ")";
     mdeps.serial = *serial;
     mdeps.store_path = opt.store.string();
     mdeps.ctl_socket = opt.ctl_socket.string();

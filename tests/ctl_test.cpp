@@ -1,4 +1,5 @@
 #include "swpasskey/ctl/json.hpp"
+#include "swpasskey/diag/registry.hpp"
 #include "swpasskey/ctl/server.hpp"
 #include "ctap_test_util.hpp"
 #include "swpasskey/log/log.hpp"
@@ -82,6 +83,64 @@ TEST_CASE("ctl requests: stats, list, delete, set-pin, reset, log-level", "[ctl]
   REQUIRE(quit);
   REQUIRE(ctl::handle_request(R"({"op":"bogus"})", deps).find("unknown op") != std::string::npos);
   REQUIRE(ctl::handle_request("garbage", deps).find("bad request") != std::string::npos);
+}
+
+TEST_CASE("ctl requests: profiles, set-profile, attestation, diagnostics", "[ctl]") {
+  diag::Registry reg;
+  Rig rig(false, false, ctap::AttestationMode::packed_x5c,
+          [&reg](ctap::AuthenticatorConfig& cfg) { cfg.diag = &reg; });
+  REQUIRE(rig.register_cred().size() == 32);
+
+  auto identity = std::make_shared<compat::Identity>();
+  ctl::ServerDeps deps;
+  deps.auth = rig.auth.get();
+  deps.store = rig.store.get();
+  deps.key_backend = "software";
+  deps.identity = identity.get();
+  deps.diag = &reg;
+  deps.attestation_summary = [&rig] { return rig.auth->attestation_summary(); };
+  std::string applied;
+  deps.apply_profile = [&](const std::string& id) -> std::string {
+    const auto* p = compat::find_profile(id);
+    if (p == nullptr) return "unknown profile: " + id;
+    applied = id;
+    identity->set(std::make_shared<const compat::CompatProfile>(*p));
+    rig.auth->set_profile(*p);
+    return {};
+  };
+
+  auto list = ctl::handle_request(R"({"op":"profiles"})", deps);
+  REQUIRE(list.find("\"ok\":true") != std::string::npos);
+  REQUIRE(list.find("\"current\":\"stock-swpasskey\"") != std::string::npos);
+  REQUIRE(list.find("\"id\":\"yubikey-5c-nfc-5.8\"") != std::string::npos);
+  REQUIRE(list.find("\"aaguid\":\"f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5\"") != std::string::npos);
+
+  REQUIRE(ctl::handle_request(R"({"op":"set-profile","profile":"nope"})", deps).find("\"ok\":false") !=
+          std::string::npos);
+  REQUIRE(applied.empty());
+  auto switched = ctl::handle_request(R"({"op":"set-profile","profile":"google-titan-v2"})", deps);
+  REQUIRE(switched.find("\"ok\":true") != std::string::npos);
+  REQUIRE(applied == "google-titan-v2");
+  REQUIRE(identity->profile()->id == "google-titan-v2");
+  REQUIRE(rig.auth->get_info().aaguid == compat::find_profile("google-titan-v2")->aaguid);
+  REQUIRE(ctl::handle_request(R"({"op":"profiles"})", deps).find("\"current\":\"google-titan-v2\"") !=
+          std::string::npos);
+
+  auto att = ctl::handle_request(R"({"op":"attestation"})", deps);
+  REQUIRE(att.find("\"ok\":true") != std::string::npos);
+  REQUIRE(att.find("source=") != std::string::npos);
+
+  auto diag = ctl::handle_request(R"({"op":"diagnostics"})", deps);
+  REQUIRE(diag.find("\"ok\":true") != std::string::npos);
+  REQUIRE(diag.find("\"records\":[") != std::string::npos);
+  REQUIRE(diag.find("stock-swpasskey") != std::string::npos);
+
+  const auto out = std::filesystem::temp_directory_path() /
+                   ("swpk-diag-ctl-" + std::to_string(::getpid()) + ".json");
+  auto written = ctl::handle_request("{\"op\":\"diagnostics\",\"out\":\"" + out.string() + "\"}", deps);
+  REQUIRE(written.find("\"ok\":true") != std::string::npos);
+  REQUIRE(std::filesystem::exists(out));
+  std::filesystem::remove(out);
 }
 
 TEST_CASE("ctl unix socket round trip", "[ctl]") {

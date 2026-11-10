@@ -46,6 +46,9 @@ std::vector<std::uint8_t> encode_get_info(const GetInfoSnapshot& s) {
     opts.emplace_back(Writer::encode_tstr("plat"), Writer::encode_bool(s.options.plat));
     opts.emplace_back(Writer::encode_tstr("rk"), Writer::encode_bool(s.options.rk));
     opts.emplace_back(Writer::encode_tstr("up"), Writer::encode_bool(s.options.up));
+    if (s.options.uv.has_value()) {
+      opts.emplace_back(Writer::encode_tstr("uv"), Writer::encode_bool(*s.options.uv));
+    }
     Writer w;
     w.write_map(std::move(opts));
     top.emplace_back(Writer::encode_uint(4), w.finish());

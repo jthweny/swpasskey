@@ -17,6 +17,7 @@
 
 #include "swpasskey/ui/menubar.hpp"
 
+#include "swpasskey/compat/profile.hpp"
 #include "swpasskey/log/log.hpp"
 #include "swpasskey/ui/keys_model.hpp"
 
@@ -225,6 +226,11 @@ NSTextField* heading(NSString* text) {
                 NSTableViewDelegate, NSToolbarDelegate, NSWindowDelegate>
 - (instancetype)initWithDeps:(swpk::ui::MenuBarDeps)deps;
 - (void)teardown;
+- (void)buildProfileMenu;
+- (void)syncProfileFromDaemon;
+- (void)applyProfileState:(const std::string&)id;
+- (void)selectProfile:(id)sender;
+- (void)resetCredentials:(id)sender;
 @end
 
 @implementation SWPKMenuController {
@@ -237,6 +243,9 @@ NSTextField* heading(NSString* text) {
   NSStatusItem* item_;
   NSMenu* menu_;
   NSMenuItem* summaryItem_;
+  NSMenuItem* profileMenuItem_;
+  NSMenu* profileMenu_;
+  std::string currentProfileId_;
 
   NSWindow* keysWindow_;
   NSTableView* table_;
@@ -252,6 +261,7 @@ NSTextField* heading(NSString* text) {
   NSPopUpButton* levelPopup_;
   NSButton* pinButton_;
   NSTextField* pinStatus_;
+  NSTextField* profileValue_;  // About pane; follows a profile switch
 
   NSWindow* welcomeWindow_;
   NSButton* welcomeHide_;
@@ -285,6 +295,12 @@ NSTextField* heading(NSString* text) {
   [menu_ addItem:[NSMenuItem separatorItem]];
   [menu_ addItem:menu_item(@"Passkeys…", @selector(showKeys:), @"k", self)];
   [menu_ addItem:menu_item(@"Settings…", @selector(showSettings:), @",", self)];
+  [self buildProfileMenu];
+  profileMenuItem_ = [[NSMenuItem alloc] initWithTitle:@"Compatibility Profile"
+                                               action:nil
+                                        keyEquivalent:@""];
+  profileMenuItem_.submenu = profileMenu_;
+  [menu_ addItem:profileMenuItem_];
   [menu_ addItem:[NSMenuItem separatorItem]];
   [menu_ addItem:menu_item(@"Quit swpasskey", @selector(quit:), @"q", self)];
   item_.menu = menu_;
@@ -556,6 +572,7 @@ NSTextField* heading(NSString* text) {
 - (void)refreshSummary {
   const std::size_t n = deps_.store != nullptr ? deps_.store->size() : 0;
   summaryItem_.title = ns(swpk::ui::keys_summary(n, deps_.key_backend));
+  [self syncProfileFromDaemon];
 }
 
 - (void)quit:(id)sender {
@@ -563,6 +580,112 @@ NSTextField* heading(NSString* text) {
   if (deps_.quit) {
     deps_.quit();
   }
+}
+
+#pragma mark - Compatibility profile
+
+// One radio item per modelled authenticator plus the reset action. The titles
+// come from the registry, so adding a profile is a one-file change.
+- (void)buildProfileMenu {
+  profileMenu_ = [[NSMenu alloc] initWithTitle:@"Compatibility Profile"];
+  for (const auto& p : swpk::compat::all_profiles()) {
+    NSMenuItem* it = [[NSMenuItem alloc] initWithTitle:ns(p.name)
+                                                action:@selector(selectProfile:)
+                                         keyEquivalent:@""];
+    it.target = self;
+    it.representedObject = ns(p.id);
+    it.toolTip = [NSString stringWithFormat:@"AAGUID %@\n%@ %@\nUSB %04x:%04x",
+                                            ns(p.aaguid_str), ns(p.manufacturer), ns(p.product),
+                                            static_cast<unsigned>(p.vid),
+                                            static_cast<unsigned>(p.pid)];
+    [profileMenu_ addItem:it];
+  }
+  [profileMenu_ addItem:[NSMenuItem separatorItem]];
+  NSMenuItem* reset = menu_item(@"Reset Credentials\u2026", @selector(resetCredentials:), @"", self);
+  reset.toolTip = @"Erase every passkey on this key (factory reset).";
+  [profileMenu_ addItem:reset];
+}
+
+// Reads the live selection from the daemon so a switch made with
+// `swpasskeyctl set-profile` is reflected here without a restart.
+- (void)syncProfileFromDaemon {
+  if (!deps_.control_request || profileMenu_ == nil) return;
+  auto reply = deps_.control_request(R"({"op":"profiles"})");
+  if (!reply) return;
+  const std::string& json = *reply;
+  const std::string key = R"("current":")";
+  const auto at = json.find(key);
+  if (at == std::string::npos) return;
+  const auto begin = at + key.size();
+  const auto end = json.find('"', begin);
+  if (end == std::string::npos) return;
+  [self applyProfileState:json.substr(begin, end - begin)];
+}
+
+- (void)applyProfileState:(const std::string&)id {
+  currentProfileId_ = id;
+  const NSString* current = ns(id);
+  for (NSMenuItem* it in profileMenu_.itemArray) {
+    if (![it.representedObject isKindOfClass:[NSString class]]) continue;
+    it.state = [it.representedObject isEqual:current] ? NSControlStateValueOn
+                                                      : NSControlStateValueOff;
+  }
+  const auto* p = swpk::compat::find_profile(id);
+  profileMenuItem_.title =
+      p != nullptr ? [NSString stringWithFormat:@"Compatibility Profile: %@", ns(p->name)]
+                   : @"Compatibility Profile";
+}
+
+- (void)selectProfile:(id)sender {
+  NSString* ident = [sender representedObject];
+  if (ident == nil || !deps_.control_request) return;
+  const std::string id = ident.UTF8String;
+  if (id == currentProfileId_) return;
+  auto reply = deps_.control_request("{\"op\":\"set-profile\",\"profile\":\"" + id + "\"}");
+  if (!reply || reply->find("\"ok\":true") == std::string::npos) {
+    NSAlert* err = [[NSAlert alloc] init];
+    err.messageText = @"Could not switch the profile";
+    err.informativeText = reply && !reply->empty() ? ns(*reply) : @"The daemon did not answer.";
+    [err addButtonWithTitle:@"OK"];
+    [err runModal];
+    return;
+  }
+  [self applyProfileState:id];
+  const auto* p = swpk::compat::find_profile(id);
+  NSAlert* a = [[NSAlert alloc] init];
+  a.messageText = [NSString stringWithFormat:@"Now presenting %@", p != nullptr ? ns(p->name) : ident];
+  a.informativeText =
+      @"New registrations carry this AAGUID and attestation subject. Passkeys saved earlier were "
+      @"created under the previous identity; reset them if the experiment needs a factory-fresh key.";
+  [a addButtonWithTitle:@"Reset Credentials"];
+  [a addButtonWithTitle:@"Keep Passkeys"];
+  [a setAlertStyle:NSAlertStyleWarning];
+  if ([a runModal] == NSAlertFirstButtonReturn) {
+    [self resetCredentials:nil];
+  }
+}
+
+- (void)resetCredentials:(id)sender {
+  if (!deps_.control_request) return;
+  NSAlert* a = [[NSAlert alloc] init];
+  a.messageText = @"Erase all passkeys on this key?";
+  a.informativeText = @"Every credential is deleted and the sites that used them will stop accepting this "
+                      @"key until it registers again. swpasskey asks for approval a second time.";
+  [a addButtonWithTitle:@"Erase All"];
+  [a addButtonWithTitle:@"Cancel"];
+  [a setAlertStyle:NSAlertStyleCritical];
+  if ([a runModal] != NSAlertFirstButtonReturn) return;
+  auto reply = deps_.control_request(R"({"op":"reset"})");
+  if (!reply || reply->find("\"ok\":true") == std::string::npos) {
+    NSAlert* err = [[NSAlert alloc] init];
+    err.messageText = @"Reset failed";
+    err.informativeText = reply && !reply->empty() ? ns(*reply) : @"No answer from the daemon.";
+    [err addButtonWithTitle:@"OK"];
+    [err runModal];
+    return;
+  }
+  swpk::log::warn("menubar_reset_done");
+  [self refreshSummary];
 }
 
 #pragma mark - Passkeys window
@@ -1004,6 +1127,13 @@ NSTextField* heading(NSString* text) {
 - (void)refreshSettings {
   [self refreshLoginState];
   [self refreshPinState];
+  if (profileValue_ != nil) {
+    const auto* p = swpk::compat::find_profile(currentProfileId_);
+    profileValue_.stringValue = p != nullptr
+        ? [NSString stringWithFormat:@"%@ (%@)", ns(p->name), ns(p->aaguid_str)]
+        : ns(deps_.profile_label);
+    profileValue_.toolTip = profileValue_.stringValue;
+  }
   welcomeCheckbox_.state = [[NSUserDefaults standardUserDefaults] boolForKey:@(kHideWelcomeDefault)]
                                ? NSControlStateValueOff
                                : NSControlStateValueOn;
@@ -1115,7 +1245,9 @@ NSTextField* heading(NSString* text) {
   reveal.toolTip = @"Show in Finder";
   NSStackView* folderRow = [NSStackView stackViewWithViews:@[ value(folder), reveal ]];
   folderRow.spacing = 4;
+  profileValue_ = value(ns(deps_.profile_label));
   NSGridView* grid = [NSGridView gridViewWithViews:@[
+    @[ key(@"Identifies as:"), profileValue_ ],
     @[ key(@"Key storage:"), value(ns(deps_.key_backend)) ],
     @[ key(@"Serial number:"), value(ns(deps_.serial)) ],
     @[ key(@"Data folder:"), folderRow ],

@@ -46,6 +46,11 @@ public:
   Stats stats() const;
   const ctap::HidDevice& device() const { return device_; }
 
+  // Asks the I/O thread to re-enumerate with a new USB identity after a
+  // runtime profile switch. Safe to call from any thread; the transport is only
+  // touched between read() calls, on its own thread.
+  void request_identity_rebind(hid::DeviceConfig cfg);
+
 private:
   struct Inflight {
     std::optional<ctap::Message> cmd;
@@ -58,9 +63,14 @@ private:
   void worker_main();
   bool write_all(std::vector<hid::Report> reports);
 
+  bool apply_pending_rebind();
+
   hid::Transport& transport_;
   ctap::RequestHandler& handler_;
   ctap::HidDevice device_;
+
+  std::mutex rebind_mu_;
+  std::optional<hid::DeviceConfig> pending_rebind_;
 
   std::atomic<bool> stop_{false};
   mutable std::mutex mu_;

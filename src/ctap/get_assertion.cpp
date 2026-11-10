@@ -173,8 +173,11 @@ Result<std::vector<std::uint8_t>> Authenticator::cmd_get_assertion(
   if (q->rp_id.empty() || q->rp_id.size() > 255) {
     return fail(Status::InvalidParameter);
   }
-  if (q->options.uv.has_value() && *q->options.uv) {
-    return fail(Status::InvalidOption);
+  // uv=true: the host wants user verification. As on makeCredential, a key with
+  // no PIN answers PIN_NOT_SET so the browser can create one, and PUAT_REQUIRED
+  // is returned when a PIN exists but no token came with the request.
+  if (q->options.uv.has_value() && *q->options.uv && !pin_set()) {
+    return fail(Status::PinNotSet);
   }
   const bool up = !q->options.up.has_value() || *q->options.up;
 

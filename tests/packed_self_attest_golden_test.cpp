@@ -9,6 +9,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+
 namespace swpk::ctap::detail {
 std::vector<std::uint8_t> build_auth_data(std::span<const std::uint8_t, 32> rp_id_hash,
                                           std::uint8_t flags, std::uint32_t sign_count,
@@ -63,7 +65,7 @@ TEST_CASE("a real makeCredential response has the golden shape", "[golden]") {
   Rig rig;
   auto r = rig.call(make_cred_request({}));
   REQUIRE(r.has_value());
-  // a3 01 66 'packed' 02 58 xx <authData> 03 a2 63 'alg' 26 63 'sig' 58 xx <sig>
+  // a3 01 66 'packed' 02 58 xx <authData> 03 a3 'alg' 26 'sig' 58 xx <sig> 'x5c' 81 59 xx <der>
   REQUIRE((*r)[0] == 0xA3);
   REQUIRE((*r)[1] == 0x01);
   REQUIRE((*r)[2] == 0x66);
@@ -73,11 +75,20 @@ TEST_CASE("a real makeCredential response has the golden shape", "[golden]") {
   const std::size_t ad_len = (*r)[11];
   const std::size_t off = 12 + ad_len;
   REQUIRE((*r)[off] == 0x03);
-  REQUIRE((*r)[off + 1] == 0xA2);
+  // Three keys since the fork: the attestation certificate ships in x5c.
+  REQUIRE((*r)[off + 1] == 0xA3);
   REQUIRE((*r)[off + 2] == 0x63);
   REQUIRE(std::string(r->begin() + static_cast<std::ptrdiff_t>(off + 3), r->begin() + static_cast<std::ptrdiff_t>(off + 6)) == "alg");
   REQUIRE((*r)[off + 6] == 0x26);
   REQUIRE((*r)[off + 7] == 0x63);
   REQUIRE(std::string(r->begin() + static_cast<std::ptrdiff_t>(off + 8), r->begin() + static_cast<std::ptrdiff_t>(off + 11)) == "sig");
   REQUIRE((*r)[off + 11] == 0x58);
+  // "x5c" as a CBOR text key, followed by an array holding one DER certificate.
+  const char kX5c[] = {'x', '5', 'c'};
+  auto x5c = std::search(r->begin() + static_cast<std::ptrdiff_t>(off), r->end(),
+                         std::begin(kX5c), std::end(kX5c));
+  REQUIRE(x5c != r->end());
+  REQUIRE(*(x5c - 1) == 0x63);  // text(3)
+  REQUIRE(*(x5c + 3) == 0x81);  // array(1)
+  REQUIRE((*(x5c + 4) & 0xE0) == 0x40);  // byte string, short or 8-bit length form
 }

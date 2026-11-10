@@ -1,0 +1,17 @@
+swpasskey — compatibility fork
+
+This repository is a fork of swpasskey by madeye and contributors
+(https://github.com/madeye/swpasskey), used under the MIT License. The upstream
+copyright notice and license text are preserved in LICENSE.
+
+Additions in this fork (compatibility profiles, profile-aware attestation
+certificates, per-registration diagnostics, the WebAuthn probe) are released
+under the same MIT License.
+
+The vendor names, AAGUIDs, USB identifiers and certificate subject fields used
+by the compatibility profiles are factual identifiers of third-party products,
+reproduced to describe a compatibility experiment. They are trademarks of their
+respective owners. This fork is not affiliated with, endorsed by, or certified by
+Yubico, Google, the FIDO Alliance, or OpenAI, and its attestation certificates
+are self-signed and do not chain to any vendor root. Do not present this software
+as a certified hardware security key.

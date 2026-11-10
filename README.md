@@ -1,5 +1,13 @@
 # swpasskey
 
+> **Compatibility fork.** This branch adds selectable authenticator identities
+> (AAGUID + USB strings), packed **attestation with an `x5c` certificate**, a
+> per-registration diagnostics export and a local WebAuthn probe, to study how a
+> relying party decides whether a key is "hardware". See
+> [`docs/COMPAT.md`](docs/COMPAT.md). The certificate is self-signed: it names the
+> modelled vendor but does not chain to their root, and this is still software
+> with a daemon-side approval prompt, not a certified key.
+
 **This is a software authenticator.** Same-uid malware cannot *copy* TPM- or
 Secure Enclave-backed private keys, but it **can sign with them without the
 Approve click**. The Approve prompt is daemon UX, not on-chip user presence
