@@ -178,15 +178,15 @@
         prf: prfInput(pk.extensions),
       });
     } catch (err) {
-      if (err instanceof Unavailable) {
-        console.warn("[swpasskey bridge] bridge offline, using the browser's own authenticator");
-        return originalGet(options);
-      }
-      throw err;
+      // A sign-in must never fail because the bridge could not answer: fall back
+      // to Chrome's own authenticator for any bridge-side error, not only for
+      // "unreachable". Registrations stay strict, since those are the experiment.
+      console.warn("[swpasskey bridge] assertion fell back to Chrome: " + (err && err.message));
+      return originalGet(options);
     }
     if (!json.ok) {
-      console.error("[swpasskey bridge] " + (json.error || "refused"));
-      throw new DOMException(json.error || "bridge refused", "NotAllowedError");
+      console.warn("[swpasskey bridge] assertion fell back to Chrome: " + (json.error || "refused"));
+      return originalGet(options);
     }
     announce({
       kind: "get",

@@ -116,6 +116,34 @@ class Session {
     return res.result.value;
   }
 
+  // Record POST responses (bodies) so a backend's answer can be read directly.
+  async watchNetwork(sink, filter = /\/api\//) {
+    const bodies = new Map();
+    this.ws.addEventListener("message", (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.method === "Network.responseReceived") {
+        const { requestId, response, type } = msg.params;
+        if (type === "Fetch" || type === "XHR") bodies.set(requestId, { response, ts: Date.now() });
+      }
+      if (msg.method === "Network.loadingFinished" && bodies.has(msg.params.requestId)) {
+        const { response } = bodies.get(msg.params.requestId);
+        bodies.delete(msg.params.requestId);
+        if (!filter.test(response.url)) return;
+        if (response.status >= 300) {
+          sink(`${response.status} ${response.url.slice(0, 120)}`);
+          return;
+        }
+        this.send("Network.getResponseBody", { requestId: msg.params.requestId })
+          .then((res) => {
+            const text = res.base64Encoded ? Buffer.from(res.body, "base64").toString() : res.body;
+            sink(`${response.status} ${response.url.slice(0, 120)}\n${text.slice(0, 1200)}`);
+          })
+          .catch(() => sink(`${response.status} ${response.url.slice(0, 120)} (no body)`));
+      }
+    });
+    await this.send("Network.enable", {});
+  }
+
   async shot(path) {
     const res = await this.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(path, Buffer.from(res.data, "base64"));
@@ -239,11 +267,14 @@ const press = async (url, index) => {
   }
 };
 
-const flow = async (url, shotPath, watch) => {
+const flow = async (url, shotPath, watch, net) => {
   const before = readLogLines();
   const s = await Session.open(url);
   if (watch) {
     await s.watchConsole((line) => console.log("  " + line));
+  }
+  if (net) {
+    await s.watchNetwork((line) => console.log("  net: " + line));
   }
   let marker;
   try {
@@ -304,7 +335,7 @@ switch (cmd) {
     await press(url, index);
     break;
   case "flow":
-    await flow(url, opt("shot", undefined), argv.includes("--console"));
+    await flow(url, opt("shot", undefined), argv.includes("--console"), argv.includes("--net"));
     break;
   case "shot": {
     const s = await Session.open(url);
