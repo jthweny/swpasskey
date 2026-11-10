@@ -3,8 +3,8 @@
 <!--
   launchd LaunchAgent for swpasskeyd.app (macOS).
 
-    cp packaging/macos/com.tangzixiang.swpasskey.daemon.plist ~/Library/LaunchAgents/
-    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.tangzixiang.swpasskey.daemon.plist
+    cp packaging/macos/com.jthweny.swpasskey.daemon.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jthweny.swpasskey.daemon.plist
 
   Manual alternative to Preferences > "Launch at login" in the app's menu bar
   item, which registers the copy of this agent embedded in the bundle
@@ -19,7 +19,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.tangzixiang.swpasskey.daemon</string>
+  <string>com.jthweny.swpasskey.daemon</string>
   <key>ProgramArguments</key>
   <array>
     <string>/Applications/swpasskeyd.app/Contents/MacOS/swpasskeyd</string>

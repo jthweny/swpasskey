@@ -10,7 +10,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.tangzixiang.swpasskey.daemon</string>
+  <string>com.jthweny.swpasskey.daemon</string>
   <key>BundleProgram</key>
   <string>Contents/MacOS/swpasskeyd</string>
   <key>EnvironmentVariables</key>

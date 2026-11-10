@@ -29,7 +29,7 @@ is not listed for your account.
 Check whether your team has it: on the App ID's page the capability appears as
 **HID Virtual Device**. If it is missing, request it through Apple Developer
 Support — this is not a self-service checkbox. A wildcard App ID cannot carry it;
-register the explicit ID `com.tangzixiang.swpasskey.daemon` (or change the bundle
+register the explicit ID `com.jthweny.swpasskey.daemon` (or change the bundle
 ID in `packaging/macos/swpasskeyd.app/Contents/Info.plist` and the LaunchAgent
 label to one you own).
 
@@ -163,7 +163,7 @@ swpasskeyctl attestation
 ## 6. Uninstall
 
 ```sh
-launchctl bootout gui/$(id -u)/com.tangzixiang.swpasskey.daemon 2>/dev/null
+launchctl bootout gui/$(id -u)/com.jthweny.swpasskey.daemon 2>/dev/null
 rm -rf /Applications/swpasskeyd.app
 rm -rf ~/Library/Application\ Support/swpasskey ~/Library/Logs/swpasskey
 security delete-generic-password -s swpasskey 2>/dev/null || true

@@ -56,7 +56,7 @@ Notarization is refused with an Apple Development identity, on purpose.
 real gate; nothing here can create it.
 
    - developer.apple.com → Certificates, Identifiers & Profiles → **Identifiers**
-   - register the explicit App ID `com.tangzixiang.swpasskey.daemon` (wildcards
+   - register the explicit App ID `com.jthweny.swpasskey.daemon` (wildcards
      cannot carry restricted entitlements)
    - in that App ID's capability list, enable **HID Virtual Device**
      (`com.apple.developer.hid.virtual.device`). If it is not listed, it has to be
@@ -103,6 +103,14 @@ xcrun notarytool store-credentials swpasskey-notary \
   --apple-id you@example.com --team-id TEAMID
 export SWPASSKEY_NOTARY_PROFILE=swpasskey-notary
 packaging/macos/make_dmg.sh build/app
+```
+
+If this is the first run after a rename (the fork now uses bundle ID
+`com.jthweny.swpasskey.daemon`, not the upstream one), the old store belongs to a
+different keychain entry and cannot be opened. Move it aside once:
+
+```sh
+rm -rf ~/Library/Application\ Support/swpasskey
 ```
 
 ## 3. Install and start
@@ -188,8 +196,8 @@ $swpasskeyctl stats
 Menu bar → **Settings…** → tick *Open swpasskey at login*. Or by hand:
 
 ```sh
-PLIST=~/Library/LaunchAgents/com.tangzixiang.swpasskey.daemon.plist
-cp packaging/macos/com.tangzixiang.swpasskey.daemon.plist "$PLIST"
+PLIST=~/Library/LaunchAgents/com.jthweny.swpasskey.daemon.plist
+cp packaging/macos/com.jthweny.swpasskey.daemon.plist "$PLIST"
 launchctl bootstrap gui/$(id -u) "$PLIST"
 ```
 
@@ -223,11 +231,11 @@ pkill -f "swpasskeyd --testing"
 ## 8. Remove it
 
 ```sh
-LABEL=com.tangzixiang.swpasskey.daemon
+LABEL=com.jthweny.swpasskey.daemon
 launchctl bootout gui/$(id -u)/$LABEL 2>/dev/null
 pkill -f swpasskeyd
 rm -rf /Applications/swpasskeyd.app
-rm -f ~/Library/LaunchAgents/com.tangzixiang.swpasskey.daemon.plist
+rm -f ~/Library/LaunchAgents/com.jthweny.swpasskey.daemon.plist
 rm -rf ~/Library/Application\ Support/swpasskey
 rm -rf ~/Library/Logs/swpasskey
 ```

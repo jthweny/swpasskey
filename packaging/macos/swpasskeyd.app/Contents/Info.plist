@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>com.tangzixiang.swpasskey.daemon</string>
+  <string>com.jthweny.swpasskey.daemon</string>
   <key>CFBundleName</key>
   <string>swpasskeyd</string>
   <key>CFBundleDisplayName</key>

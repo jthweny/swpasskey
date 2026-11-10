@@ -18,8 +18,8 @@
 namespace swpk::crypto {
 namespace {
 
-constexpr const char* kTagPrefix = "com.tangzixiang.swpasskey.se.";
-constexpr const char* kHmacService = "com.tangzixiang.swpasskey";
+constexpr const char* kTagPrefix = "com.jthweny.swpasskey.se.";
+constexpr const char* kHmacService = "com.jthweny.swpasskey";
 constexpr const char* kHmacAccountPrefix = "hmac.";
 constexpr const char* kLabel = "swpasskey";
 

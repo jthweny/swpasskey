@@ -35,8 +35,8 @@ namespace {
 
 constexpr const char* kLogLevelDefault = "SWPKLogLevel";
 constexpr const char* kHideWelcomeDefault = "SWPKHideWelcome";
-constexpr const char* kAgentLabel = "com.tangzixiang.swpasskey.daemon";
-NSString* const kAgentPlist = @"com.tangzixiang.swpasskey.daemon.plist";
+constexpr const char* kAgentLabel = "com.jthweny.swpasskey.daemon";
+NSString* const kAgentPlist = @"com.jthweny.swpasskey.daemon.plist";
 
 NSToolbarItemIdentifier const kSearchItem = @"swpk.search";
 NSToolbarItemIdentifier const kDeleteItem = @"swpk.delete";

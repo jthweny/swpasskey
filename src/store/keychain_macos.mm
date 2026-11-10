@@ -1,4 +1,4 @@
-// macOS Keychain DEK item: service com.tangzixiang.swpasskey, one generic
+// macOS Keychain DEK item: service com.jthweny.swpasskey, one generic
 // password per store with account "dek.<install_id hex>". The install_id is
 // part of the account so that two stores opened with the OS keychain (the real
 // one and, say, a test run with --store /tmp/...) never overwrite each other's
@@ -19,7 +19,7 @@
 namespace swpk::store {
 namespace {
 
-constexpr const char* kService = "com.tangzixiang.swpasskey";
+constexpr const char* kService = "com.jthweny.swpasskey";
 constexpr const char* kLegacyAccount = "dek";
 constexpr const char* kLabel = "swpasskey store DEK";
 

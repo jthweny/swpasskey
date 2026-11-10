@@ -39,7 +39,7 @@ void add_legacy_item(const std::string& install_id, std::span<const std::uint8_t
   @autoreleasepool {
     NSDictionary* item = @{
       (id)kSecClass : (id)kSecClassGenericPassword,
-      (id)kSecAttrService : @"com.tangzixiang.swpasskey",
+      (id)kSecAttrService : @"com.jthweny.swpasskey",
       (id)kSecAttrAccount : @"dek",
       (id)kSecAttrLabel : @"swpasskey store DEK",
       (id)kSecAttrComment : [NSString stringWithUTF8String:install_id.c_str()],
@@ -53,7 +53,7 @@ bool legacy_item_exists() {
   @autoreleasepool {
     NSDictionary* q = @{
       (id)kSecClass : (id)kSecClassGenericPassword,
-      (id)kSecAttrService : @"com.tangzixiang.swpasskey",
+      (id)kSecAttrService : @"com.jthweny.swpasskey",
       (id)kSecAttrAccount : @"dek",
     };
     return SecItemCopyMatching((__bridge CFDictionaryRef)q, nullptr) == errSecSuccess;
@@ -64,7 +64,7 @@ void remove_legacy_item() {
   @autoreleasepool {
     NSDictionary* q = @{
       (id)kSecClass : (id)kSecClassGenericPassword,
-      (id)kSecAttrService : @"com.tangzixiang.swpasskey",
+      (id)kSecAttrService : @"com.jthweny.swpasskey",
       (id)kSecAttrAccount : @"dek",
     };
     (void)SecItemDelete((__bridge CFDictionaryRef)q);

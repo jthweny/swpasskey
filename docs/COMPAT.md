@@ -122,7 +122,9 @@ packaging/macos/make_dmg.sh build/app "$IDENTITY" release --notarize <profile>
 # → dist/swpasskey.dmg
 ```
 
-The DMG holds `swpasskeyd.app` (menu-bar agent, no Dock icon, launches at login
+The app's bundle ID is `com.jthweny.swpasskey.daemon`; register that exact App ID
+on developer.apple.com with **HID Virtual Device** enabled. The DMG holds
+`swpasskeyd.app` (menu-bar agent, no Dock icon, launches at login
 once enabled) plus a symlink to `/Applications`. Drag it over, open it once, pick
 a profile from the menu bar. Chrome picks the device up live — no restart — and
 the daybreak "add a security key" sheet lists it as a USB key; the Approve panel
