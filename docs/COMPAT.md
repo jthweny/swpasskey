@@ -198,6 +198,15 @@ probed with every input we control:
 | leaf + the **real** Yubico attestation root chain appended (x5c=4) | 200 | false |
 | leaf whose issuer DN is exactly `CN=Yubico FIDO Attestation B 1` | 200 | false |
 | **Google Titan v2** AAGUID with the same self-signed statement | 200 | false |
+| full Yubico-shaped leaf: AAGUID extension **and** chain **and** CA:FALSE/KU/SKI/AKI, issuer `CN=Yubico FIDO Attestation B 1` | 200 | false |
+
+That last row closes the gap in the earlier matrix: every earlier failure either had
+the AAGUID extension without a chain, or a chain without the extension. With both,
+and with the extension set, the statement still does not satisfy their check —
+and the same statement is accepted by `python-fido2`'s
+`PackedAttestation.verify` as `AttestationType.BASIC`, i.e. it is a well-formed
+packed attestation with a internally consistent chain. The rejection is therefore
+anchoring, not formatting.
 
 The Titan row matters: a different vendor's MDS entry resolves just as well
 (`authenticator_name: "Google Titan Security Key v2"`, `is_security_key: true`) and
