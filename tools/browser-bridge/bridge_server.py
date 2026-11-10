@@ -42,6 +42,7 @@ from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 
 from cryptography.hazmat.primitives import serialization
+import alt_formats
 import tpm_statement
 from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -373,7 +374,30 @@ class Handler(BaseHTTPRequestHandler):
             auth_data_der = bytes(auth_data_der)
         exp_fmt = os.environ.get("SWPASSKEY_BRIDGE_FMT", "")
         exp_x5c = os.environ.get("SWPASSKEY_BRIDGE_X5C", "")
-        if exp_fmt == "apple":
+        if exp_fmt in ("fido-u2f", "android-key"):
+            leaf_key = ec.generate_private_key(ec.SECP256R1())
+            if exp_fmt == "fido-u2f":
+                stmt, fmt_out = alt_formats.u2f_statement(auth_data_der, cdh, b"", leaf_key)
+                # u2f needs the leaf certificate in x5c, generated here
+                from cryptography import x509 as _x509
+                from cryptography.hazmat.primitives import serialization as _ser, hashes as _h
+                import datetime as _dt
+                from cryptography.x509.oid import NameOID as _NO
+                now = _dt.datetime.now(_dt.timezone.utc)
+                leaf = (_x509.CertificateBuilder()
+                        .subject_name(_x509.Name([_x509.NameAttribute(_NO.COMMON_NAME, "YubiKey 5C NFC")]))
+                        .issuer_name(_x509.Name([_x509.NameAttribute(_NO.COMMON_NAME, "YubiKey 5C NFC")]))
+                        .public_key(leaf_key.public_key()).serial_number(_x509.random_serial_number())
+                        .not_valid_before(now).not_valid_after(now + _dt.timedelta(days=3650))
+                        .add_extension(_x509.BasicConstraints(ca=False, path_length=None), critical=True)
+                        .sign(leaf_key, _h.SHA256()))
+                leaf_der = leaf.public_bytes(_ser.Encoding.DER)
+                stmt, fmt_out = alt_formats.u2f_statement(auth_data_der, cdh, leaf_der, leaf_key)
+            else:
+                stmt, fmt_out = alt_formats.android_key_statement(auth_data_der, cdh, leaf_key)
+            att_obj = cbor.encode({"fmt": fmt_out, "attStmt": stmt, "authData": auth_data_der})
+            print(f"[bridge] EXPERIMENT fmt={fmt_out}", file=sys.stderr)
+        elif exp_fmt == "apple":
             stmt, _ = tpm_statement.apple_statement(auth_data_der, cdh, aaguid=bytes(auth_data_der[37:53]))
             att_obj = cbor.encode({"fmt": "apple", "attStmt": stmt, "authData": auth_data_der})
             print("[bridge] EXPERIMENT fmt=apple (local chain, nonce extension set)", file=sys.stderr)
