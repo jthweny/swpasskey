@@ -146,7 +146,9 @@ Conclusions that follow from the measurements: the capability is self-service
 only in the sense that it can be ticked, Apple emits it only into development
 profiles, and the kernel's MACF policy ignores it until the team is actually
 granted the entitlement. Signing setup, bundle ID, keychain groups and app code
-are all ruled out. The remaining action is the entitlement request.
+are all ruled out. The remaining action is the entitlement request, and
+`docs/entitlement-request.md` holds it ready to submit, with the probe output
+already embedded.
 
 If the app builds with the entitlement but the menu bar still says `No security
 key`, run `tools/entitlement-probe/run.sh`. It isolates the question — does this

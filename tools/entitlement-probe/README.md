@@ -55,6 +55,9 @@ for a team that has only self-served the capability.
 
 ## If the verdict is "refused"
 
+`docs/entitlement-request.md` is that request, written out with this output
+embedded — paste it into the form and attach the same text.
+
 Send the probe output, the team ID and the kernel line to
 <https://developer.apple.com/contact/request/system-extension/> and ask for the
 **Virtual HID Device** entitlement. Apple DTS is explicit that the development
