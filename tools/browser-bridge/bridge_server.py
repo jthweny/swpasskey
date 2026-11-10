@@ -350,6 +350,34 @@ class Handler(BaseHTTPRequestHandler):
             {"fmt": attestation.fmt, "attStmt": attestation.att_stmt, "authData": bytes(auth_data)}
         )
         auth_data_der = bytes(auth_data)
+
+        # ---- experiment overrides (MDS-anchor research) ----------------------
+        # SWPASSKEY_BRIDGE_AAGUID      16-byte AAGUID to claim in authData
+        # SWPASSKEY_BRIDGE_X5C         path to a DER cert to ship as the sole x5c
+        # SWPASSKEY_BRIDGE_FMT         "none" emits fmt=none with an empty attStmt
+        claim = os.environ.get("SWPASSKEY_BRIDGE_AAGUID")
+        if claim:
+            import uuid as _uuid
+            auth_data_der = bytearray(auth_data_der)
+            auth_data_der[37:53] = _uuid.UUID(claim).bytes
+            auth_data_der = bytes(auth_data_der)
+        exp_fmt = os.environ.get("SWPASSKEY_BRIDGE_FMT", "")
+        exp_x5c = os.environ.get("SWPASSKEY_BRIDGE_X5C", "")
+        if exp_fmt == "none":
+            att_obj = cbor.encode({"fmt": "none", "attStmt": {}, "authData": auth_data_der})
+            print("[bridge] EXPERIMENT fmt=none, empty attStmt", file=sys.stderr)
+        elif exp_x5c:
+            anchor = open(exp_x5c, "rb").read()
+            att_obj = cbor.encode({
+                "fmt": "packed",
+                "attStmt": {"alg": -7, "sig": b"\x30\x06\x02\x01\x01\x02\x01\x01",
+                            "x5c": [anchor]},
+                "authData": auth_data_der,
+            })
+            print(f"[bridge] EXPERIMENT x5c=[{exp_x5c}] sig=placeholder", file=sys.stderr)
+        else:
+            att_obj = cbor.encode(
+                {"fmt": attestation.fmt, "attStmt": attestation.att_stmt, "authData": auth_data_der})
         credential_data = attestation.auth_data.credential_data
         record = {
             "ok": True,
