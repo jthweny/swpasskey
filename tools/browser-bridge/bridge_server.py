@@ -296,6 +296,12 @@ class Handler(BaseHTTPRequestHandler):
                 file=sys.stderr,
             )
         try:
+            if self.path == "/probe-log":
+                with open("/tmp/flag-timeline.jsonl", "a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(body) + "\n")
+                print(f"[bridge] sample total={body.get('total')} hardware={body.get('hardware')}", file=sys.stderr)
+                self._json(200, {"ok": True})
+                return
             if self.path == "/webauthn/create":
                 self._json(200, self.make_credential(body))
             elif self.path == "/webauthn/get":
