@@ -175,6 +175,26 @@ What that means, concretely:
   **"Enroll in Advanced Account Security — Completed"**, i.e. the gate that
   required a hardware key was passed by a virtual one.
 
+**What actually gates Continue** — read from the page's own component state
+(`securityMethods` prop of the security-methods screen), not inferred:
+
+```
+YubiKey 5 Series with NFC (Consumer Profile)
+  isSecurityKey: true
+  isNonExportableHardwareKey: false      <-- the gate
+Passkey / Apple Passwords / Google Password Manager
+  isSecurityKey: false
+  isNonExportableHardwareKey: false
+```
+
+The Continue button stays disabled while no method reports
+`isNonExportableHardwareKey: true`, and `/backend-api/cyber_verification/status`
+answers `{"tac1_enabled": false}` for the same reason. That flag is the output of
+validating the attestation certificate chain against the MDS root certificates and
+`attestationCertificateKeyIdentifiers`; a self-signed leaf cannot produce it, so
+this is the hard ceiling of the whole approach on this path. A real key — even a
+cheap Security Key C NFC — reports `true` and clears it.
+
 **Two harness details that cost a round trip and are worth keeping**: the page
 serialises `response.getAuthenticatorData()` and `response.getPublicKey()`, so the
 bridge must return the real authenticator data and a DER SPKI for the credential
