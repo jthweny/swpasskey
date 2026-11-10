@@ -29,16 +29,42 @@ import os
 import socket
 import sys
 import time
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from fido2 import cbor
+from fido2.ctap import CtapError
 from fido2.ctap2 import ClientPin, Ctap2
 from fido2.ctap2.pin import PinProtocolV2
 from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 
 HERE = Path(__file__).resolve().parent
+
+
+# CTAP status bytes worth naming: the raw number is useless in a console line.
+CTAP_HINTS = {
+    0x15: "LIMIT_EXCEEDED - the site's user handle is over 64 bytes, or the store is full",
+    0x19: "CREDENTIAL_EXCLUDED - this key already holds a credential for the account",
+    0x27: "OPERATION_DENIED - the presence prompt was declined or timed out",
+    0x2E: "NO_CREDENTIALS - nothing on the key matches this request",
+    0x31: "PIN_INVALID - SWPASSKEY_BRIDGE_PIN does not match the daemon's PIN",
+    0x33: "PIN_AUTH_INVALID - the PIN token was rejected",
+    0x34: "PIN_NOT_SET - no PIN on the daemon; the bridge sets one from SWPASSKEY_BRIDGE_PIN",
+    0x35: "PIN_NOT_SET - no PIN on the daemon",
+    0x36: "PUAT_REQUIRED - user verification was demanded without a PIN token",
+    0x28: "KEY_STORE_FULL - 100 discoverable credentials already",
+}
+
+
+def ctap_message(exc) -> str:
+    try:
+        code = int(exc.code)
+    except Exception:
+        return str(exc)
+    hint = CTAP_HINTS.get(code)
+    return f"daemon refused: CTAP 0x{code:02x}" + (f" ({hint})" if hint else "")
 
 
 # ----------------------------------------------------------------- CTAP plumbing
@@ -211,6 +237,16 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError as exc:
             self._json(400, {"ok": False, "error": f"bad json: {exc}"})
             return
+        if body.get("rpId") is not None or body.get("rp") is not None:
+            # One line per request, before any work: enough to see what the site
+            # asked for without dumping the challenge.
+            print(
+                f"[bridge] request {self.path} rp={body.get('rpId')} "
+                f"uv={body.get('userVerification')} rk={body.get('residentKey')} "
+                f"prf={bool(body.get('prf'))} user_len={len(body.get('userId') or '')} "
+                f"allow={len(body.get('allowCredentials') or [])}",
+                file=sys.stderr,
+            )
         try:
             if self.path == "/webauthn/create":
                 self._json(200, self.make_credential(body))
@@ -218,7 +254,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, self.get_assertion(body))
             else:
                 self._json(404, {"ok": False, "error": "not found"})
+        except CtapError as exc:
+            # The daemon's status byte is the useful part; name it.
+            message = ctap_message(exc)
+            print(f"[bridge] ERROR {self.path}: {message}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            self._json(500, {"ok": False, "error": message})
         except Exception as exc:  # keep the page's console readable
+            print(f"[bridge] ERROR {self.path}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
             self._json(500, {"ok": False, "error": f"{type(exc).__name__}: {exc}"})
 
     def make_credential(self, body: dict) -> dict:

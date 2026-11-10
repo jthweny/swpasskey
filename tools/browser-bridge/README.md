@@ -122,6 +122,28 @@ extension, which is the mechanism PRF is built on:
 Watch the bridge terminal: one line per ceremony with the AAGUID, format and
 `x5c` count. `swpasskeyctl diagnostics` has the full record.
 
+## When the page shows nothing and the bridge returns 500
+
+The page's own error handling usually swallows the reason, so the bridge prints it
+twice: as an `[bridge] ERROR …` line in its terminal, and as
+`console.error("[swpasskey bridge] …")` in the page. Refresh the console filter to
+`swpasskey` if the site floods it (Datadog `rum` 403s are normal noise).
+
+| bridge says | meaning |
+| --- | --- |
+| `CTAP 0x31 (PIN_INVALID)` | `SWPASSKEY_BRIDGE_PIN` is not the daemon's PIN. Delete the store file and restart both, or set the PIN to match. |
+| `CTAP 0x34/0x35 (PIN_NOT_SET)` | no PIN on the daemon and none was passed; set `SWPASSKEY_BRIDGE_PIN`. |
+| `CTAP 0x15 (LIMIT_EXCEEDED)` | the site's user handle is over 64 bytes, or the store is full. No hardware key would accept it either. |
+| `CTAP 0x19 (CREDENTIAL_EXCLUDED)` | this key already registered for that account; the site is refusing a duplicate. |
+| `CTAP 0x27 (OPERATION_DENIED)` | presence was declined — remove `--testing` and click the panel. |
+| `bridge unreachable at http://localhost:3000` | the bridge is not running, or is on another origin than the page's CSP allows. |
+
+Start clean, which removes the PIN and duplicate-credential cases in one move:
+
+```sh
+rm -f /tmp/swpk-bridge.bin /tmp/swpk-bridge.bin.dek
+```
+
 ## What is real, and what is not
 
 Real: the CTAP2 ceremony, the credential key (Secure Enclave / TPM / software,

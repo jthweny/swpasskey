@@ -50,6 +50,9 @@
     }
     const json = await res.json().catch(() => ({ ok: false, error: res.statusText }));
     if (!json.ok) {
+      // The page's own error handling tends to swallow this; put it in the
+      // console where it can be read.
+      console.error("[swpasskey bridge] " + (json.error || res.statusText));
       throw new DOMException(json.error || "bridge refused", "NotAllowedError");
     }
     return json;
