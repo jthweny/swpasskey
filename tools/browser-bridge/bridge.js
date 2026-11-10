@@ -16,6 +16,8 @@
   // connect-src allows http://localhost:3000 and not 127.0.0.1, so that is the
   // default; override with window.__SWPK_BRIDGE for a site with a different rule.
   const BRIDGE = window.__SWPK_BRIDGE || "http://localhost:3000";
+  // Captured before patching, so the pass-through path reaches the real thing.
+  const nativeGet = navigator.credentials.get.bind(navigator.credentials);
 
   const b64u = (buf) => {
     const bytes = new Uint8Array(buf);
@@ -132,6 +134,10 @@
   };
 
   const get = async (options) => {
+    // Never serve a sign-in by default; see tools/chrome-extension/inject.js.
+    if (window.__SWPK_INTERCEPT_GET !== true) {
+      return nativeGet(options);
+    }
     const pk = options && options.publicKey;
     if (!pk) throw new TypeError("publicKey options required");
     const json = await call("/webauthn/get", {

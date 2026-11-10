@@ -161,6 +161,12 @@
   };
 
   const get = async (options) => {
+    // Sign-in ceremonies are never served by the bridge unless explicitly asked
+    // for: the daemon holds credentials the site does not know about, and a
+    // successful-but-wrong assertion breaks the login instead of falling back.
+    if (window.__SWPK_INTERCEPT_GET !== true) {
+      return originalGet(options);
+    }
     const pk = options && options.publicKey;
     if (!pk) throw new TypeError("publicKey options required");
     let json;
