@@ -15,6 +15,18 @@
 # when it never appears.
 set -eu
 
+# Pause/resume just the bridge: while it runs, the page's WebAuthn calls are
+# answered by the daemon, which is exactly what you do not want while signing in
+# with a real passkey.
+case "${1:-}" in
+  pause)
+    pkill -f "bridge_server.py" 2>/dev/null || true
+    echo "bridge paused (daemon still running); real passkeys are back in charge"
+    exit 0 ;;
+  resume)
+    shift ;;
+esac
+
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 PROFILE=${1:-${SWPASSKEY_PROFILE:-yubikey-5c-nfc-5.8}}
 PIN=${2:-${SWPASSKEY_BRIDGE_PIN:-123456}}
