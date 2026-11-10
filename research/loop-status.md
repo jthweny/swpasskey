@@ -42,3 +42,22 @@ hardware-list AND valid chain. Row 20 (real IDmelon credential enrolled, MDS-lab
 hardware flag false) closed the "any real chain qualifies" hypothesis. Queue prioritised
 toward: models on both lists with obtainable material, aggregating which models users
 report as qualifying, and whether the hardware classification is re-evaluated over time.
+- 08:58 IDmelon's metadata anchors to **Vancosys Root CA** and IDmelon is now part of HID Global — -> 20261110-085644-idmelon-s-metadata-anchors-to-vancosys-root-ca-and-idmelon-i.md
+- 09:00 `attestationCertificateKeyIdentifiers` is a second attribution path in Metadata Statement  -> 20261110-085857--attestationcertificatekeyidentifiers-is-a-second-attributio.md
+- 09:03 Yubico **enterprise attestation** is gated by an RP allowlist on the key itself (the `1ac7 -> 20261110-090057-yubico-enterprise-attestation-is-gated-by-an-rp-allowlist-on.md
+- 09:06 Thetis being "sometimes works" suggests the accept set is not a clean model list at all bu -> 20261110-090325-thetis-being-sometimes-works-suggests-the-accept-set-is-not-.md
+- 09:08 Whether `tac1_enabled` responds to *key count* and *removal of other passkeys* is still un -> 20261110-090607-whether-tac1-enabled-responds-to-key-count-and-removal-of-ot.md
+- 09:11 Identify `f4ce5fc0` in the MDS blob (likely the firmware-5.8 AAGUID): if the newest AAGUID -> 20261110-090807-identify-f4ce5fc0-in-the-mds-blob-likely-the-firmware-5-8-aa.md
+- 09:13 Ask Token2 directly (they provision a chosen AAGUID onto partner Java Card hardware, are F -> 20261110-091118-ask-token2-directly-they-provision-a-chosen-aaguid-onto-part.md
+- 09:13 Pursue the "certification is the attestation key" fact from SoloKeys: build a Java Card /  -> 20261110-091305-pursue-the-certification-is-the-attestation-key-fact-from-so.md
+
+## Pending: A-branch attestation test (armed, waiting on session)
+
+Daemon is running with `SWPASSKEY_ATTEST_CHAIN=/tmp/abranch`: x5c = our leaf (issuer
+name = the real anchor's subject `CN=Yubico FIDO Attestation A 1`) + the genuine
+`Yubico FIDO Attestation A 1` + `Yubico Attestation Intermediate A 1` + `Yubico
+Attestation Root 1`. This is the exact cert shape a real fw 5.7.4+ YubiKey 5C NFC
+sends, except for the one signature we cannot produce.
+
+Blocked: the account session expired again (409 invalid_state on /passkeys). When the
+owner signs in: start the bridge, press Add, read the credential flags.

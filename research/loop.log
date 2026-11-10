@@ -81,3 +81,73 @@
   + queued: Check whether OpenAI trusts AAGUID alone under L3's "AAGUID without attestation" allowance
   + queued: Queue for later iterations: FIDO certified-but-software authenticators and MDS BLOB entry 
 [10/60] IDmelon's metadata anchors to **Vancosys Root CA** and IDmelon is now part of HID Global — a vendor that (a) ships a *software* credential, (b) holds its own attestation CA, and (c) sells managed FIDO to enterprises. Whether IDmelon/Vancosys issues attestation leaves or per-tenant AAGUIDs to customers is the highest-value commercial question in this whole map: https://www.token2.com/tools/fido2-mds/820d89edd65a409e85cbf73f0578f82a and https://idmelon.com/news/visit-idmelons-fido-certified-solution
+  -> research/findings/20261110-085644-idmelon-s-metadata-anchors-to-vancosys-root-ca-and-idmelon-i.md
+  sources cited: 13
+  + queued: Stop hunting vendor keys; hunt **batch-cert reuse**. If experiment 1 lands, the entire gat
+  + queued: **Vendor of our own AAGUID** via the MDS Portal is administratively real (self-service lis
+  + queued: **Ask IDmelon/Vancosys directly** (sales/support, not docs) whether they issue per-tenant 
+  + queued: **Yubico custom-AAGUID ordering**: Yubico supports custom configuration/custom AAGUIDs for
+  + queued: Re-read the TrustKey refusal as the sharpest anomaly: an MDS-listed, L1, hardware key with
+  + queued: Third-party attestation-verification code paths (python-fido2, webauthn4j, java-webauthn-s
+[11/60] `attestationCertificateKeyIdentifiers` is a second attribution path in Metadata Statement v3 — U2F/`fido-u2f` entries are keyed by cert key identifier rather than AAGUID, so an AAGUID-gate may not be the only gate the code path knows about: http://fidoalliance.org/specs/mds/fido-metadata-statement-v3.0-ps-20210518.html
+  -> research/findings/20261110-085857--attestationcertificatekeyidentifiers-is-a-second-attributio.md
+  sources cited: 14
+  + queued: **Buy the attestation, legally**: Yubico enterprise-attestation orders arrive as a ZIP of 
+  + queued: **Leaf-era matching**: the pre-5.7.4 U2F root (`457200631`, valid to 2050) is still an MDS
+  + queued: **`batchCertificate` harvest**: enumerate every statusReport carrying `batchCertificate`/`
+  + queued: **Open-source authenticator firmware**: audit Solo v2 / Nitrokey 3 / OnlyKey / Trussed / O
+  + queued: **The 133-entry U2F namespace as an allowlist probe**: because those entries have no AAGUI
+  + queued: **`fa2b99dc`** (YubiKey 5 Series with NFC, fw 5.1.0) is an accepted-family AAGUID never tr
+  + queued: **Attachment/transport as a hidden classifier input**: IDmelon's real credential had a val
+[12/60] Yubico **enterprise attestation** is gated by an RP allowlist on the key itself (the `1ac71f64` / `6ab56fad` EA-capable AAGUIDs); find out whether OpenAI is registered as an EA-allowed RP, because then a genuine Yubico owner's key would emit a different, RP-specific statement: https://docs.yubico.com/hardware/yubikey/yk-tech-manual/webdocs.pdf
+  -> research/findings/20261110-090057-yubico-enterprise-attestation-is-gated-by-an-rp-allowlist-on.md
+  sources cited: 15
+  + queued: A/B sub-CA branch mapping for every Yubico AAGUID: build a table of (AAGUID → MDS anchor c
+  + queued: Public genuine-leaf harvesting: GitHub code search for `attestation.bin`, `x5c` PEMs and `
+  + queued: Legacy-root keys: `1ac71f64` anchors to "Yubico FIDO Root CA Serial 450203556", a root shi
+  + queued: Whether `tac1_enabled` is gated on the *bundled* two-key pair (C Nano + C NFC both present
+  + queued: Second-order check on the curl-and-decode MDS workflow: diff the anchor lists for the admi
+[13/60] Thetis being "sometimes works" suggests the accept set is not a clean model list at all but a metadata-freshness or entry-completeness check — worth buying one ₹-class Thetis and one Token2 Pin+ to bracket it.
+  -> research/findings/20261110-090325-thetis-being-sometimes-works-suggests-the-accept-set-is-not-.md
+  sources cited: 21
+  + queued: Test `4599062e` (YubiKey 5C Nano 5.7.4) first: it is literally one of the two keys OpenAI'
+  + queued: Assume the accept set = "models OpenAI physically stocks" (YubiKey 5C NFC + 5C Nano + asse
+  + queued: Read the FIDO BLOB's `statusReports` for the four accepted AAGUIDs and compare `timeOfLast
+  + queued: Check `NOT_FIDO_CERTIFIED` (116/500) and `SELF_ASSERTION_SUBMITTED` entries for `keyProtec
+  + queued: Chase the single `REVOKED` entry (TruU `ba86dc56`) as a probe: it tells us whether OpenAI'
+  + queued: Ask OpenAI Support directly which AAGUIDs are "approved" (they answered a T110 compatibili
+  + queued: White-label channel: since Thetis resells Excelsecu AAGUIDs, ask Excelsecu/Token2/Feitian 
+[14/60] Whether `tac1_enabled` responds to *key count* and *removal of other passkeys* is still untested against an accepted-AAGUID credential; the Yubico post and the help centre disagree on this ("only registered login methods" vs "you don't need to remove other passkeys").
+  -> research/findings/20261110-090607-whether-tac1-enabled-responds-to-key-count-and-removal-of-ot.md
+  sources cited: 16
+  + queued: The accept list looks like *the bundle at one firmware generation*: `f4ce5fc0` is the 5.7.
+  + queued: Anchor-generation mismatch is unexplored: `f4ce5fc0` chains only to the 2024 **Yubico Atte
+  + queued: The "Set up your Daybreak keys" step is a *separate checklist item* from AAS registration 
+  + queued: Metadata-snapshot lag is a testable hypothesis rather than a guess: analogous RP docs admi
+  + queued: Yubico's custom-AAGUID / enterprise-attestation programmes (custom AAGUID configuration is
+  + queued: The cheap `Security Key C NFC` SKU question (does the US$29 part qualify?) is still open i
+  + queued: `tac1_enabled` has no public documentation anywhere; only the endpoint and the `/cyber` ch
+[15/60] Identify `f4ce5fc0` in the MDS blob (likely the firmware-5.8 AAGUID): if the newest AAGUID is on the accepted list, the gate is tracking *current* models and the recency/ingest hypothesis becomes testable by date-walking the MDS `lastStatusChange` field rather than guessing vendors.
+  -> research/findings/20261110-090807-identify-f4ce5fc0-in-the-mds-blob-likely-the-firmware-5-8-aa.md
+  sources cited: 16
+  + queued: **The accepted list looks procurement-shaped.** Four admitted AAGUIDs = Yubico 5.7/5.7.4/C
+  + queued: **Two plausible gates give different answers.** "Exact AAGUID allowlist" (procurement) vs 
+  + queued: **`attestationTypes: ["self"]` survey.** Nobody has enumerated MDS entries that declare se
+  + queued: **OpenSK is the only vendor-sanctioned "you hold the attestation key" model** (Google docu
+  + queued: **Verifier fingerprinting instead of guessing.** Take the 20 (AAGUID, chain, fmt) inputs y
+  + queued: **Enterprise attestation as a distinct request path.** CTAP 2.1 enterprise attestation ret
+  + queued: **`tac1` is not identity-gated** (requirements are checked before identity verification), 
+  + queued: **Vendor-of-record route is priced, not blocked.** MDS listing does not require certificat
+[16/60] Ask Token2 directly (they provision a chosen AAGUID onto partner Java Card hardware, are FIDO L2, issue per-key attestation certs from their own CA, and run a public MDS explorer): will they provision a customer-supplied attestation sub-CA under an MDS-listed L2 AAGUID — i.e. is "attestation as a service" a purchasable SKU rather than an attack.
+  -> research/findings/20261110-091118-ask-token2-directly-they-provision-a-chosen-aaguid-onto-part.md
+  sources cited: 15
+  + queued: Classify on credential *use*, not just enrolment: the async-worker hypothesis means a "fai
+  + queued: Enumerate the allowlist from procurement, not from MDS: OpenAI/Yubico bundle SKUs, the Tit
+  + queued: Enterprise attestation as the only per-device Yubico cert surface: check whether an EA-cap
+  + queued: Remote/WebAuthn-as-a-service providers that hold real allowlisted hardware behind an API: 
+  + queued: Ask TrustKey directly what changed and when: a vendor that was de-listed knows the list's 
+  + queued: Re-test the "second key" question against the API rather than the prose: does a second cre
+[17/60] Pursue the "certification is the attestation key" fact from SoloKeys: build a Java Card / SLE78 applet with **our own** AAGUID + our own attestation key, get it FIDO L2 certified (lab + fee), list it in MDS — the only path that makes a software-driven authenticator legitimately hardware-classified, and it makes the vendor relationship the deliverable instead of a bypass.
+  -> research/findings/20261110-091305-pursue-the-certification-is-the-attestation-key-fact-from-so.md
+  sources cited: 2
+[18/60] Cross-reference the Microsoft "Enforced attestation" column as a proxy list of models that publish *complete* chains: any model marked enforced must already satisfy chain-to-MDS-roots at Microsoft, so that column is a shortlist of AAGUIDs whose chain shape our verifier is most likely to accept.
