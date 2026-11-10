@@ -50,6 +50,7 @@ constexpr std::string_view kUsage =
     "     SWPASSKEY_PRESENCE=auto|stdin|notify|alert (default auto: desktop prompt,\n"
     "                        else the tty prompt; 'stdin' forces the tty prompt),\n"
     "     SWPASSKEY_TPM_UNSAFE_NOTPMRM=1, SWPASSKEY_TPM_TCTI=<tcti> (default device:/dev/tpmrm0),\n"
+    "     SWPASSKEY_STORE=PATH (credential store; same as --store),\n"
     "     SWPASSKEY_HID_SOCKET=PATH (dev: CTAPHID over a Unix socket, no HID device),\n"
     "     SWPASSKEY_ATTEST_CHAIN=DIR (use a real attestation chain: leaf.pem,\n"
     "                        leaf.key, optional chain.pem)\n"
@@ -151,7 +152,11 @@ int main(int argc, char** argv) {
     return 2;
   }
   if (opt.store.empty()) {
-    opt.store = swpk::daemon::default_store_path();
+    if (const char* e = std::getenv("SWPASSKEY_STORE"); e != nullptr && *e != 0) {
+      opt.store = e;
+    } else {
+      opt.store = swpk::daemon::default_store_path();
+    }
   }
   const auto data_dir = opt.store.parent_path();
   if (!swpk::daemon::ensure_dir(data_dir)) {

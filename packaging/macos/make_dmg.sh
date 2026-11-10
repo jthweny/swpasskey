@@ -14,14 +14,38 @@
 # the app still installs, runs in the menu bar and says what is missing.
 set -eu
 
-BUILD_DIR=${1:?build dir (cmake --preset app)}
-IDENTITY=${2:-}
-MODE=${3:-release}
+# Arguments are optional; the environment is the paste-safe path:
+#   SWPASSKEY_IDENTITY        "Developer ID Application: Name (TEAMID)"
+#   SWPASSKEY_NOTARY_PROFILE  notarytool keychain profile
+#   SWPASSKEY_MODE            release (default) or debug
+if [ "$#" -eq 0 ]; then
+  cat >&2 <<'USAGE'
+usage: packaging/macos/make_dmg.sh <build-dir> [identity] [release|debug] [--notarize <profile>]
+
+  <build-dir>   a directory configured with `cmake --preset app`, e.g. build/app
+  identity      optional "Developer ID Application: …"; also $SWPASSKEY_IDENTITY
+  --notarize    notarytool keychain profile; also $SWPASSKEY_NOTARY_PROFILE
+
+Example, no arguments beyond the build dir:
+  SWPASSKEY_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+    packaging/macos/make_dmg.sh build/app
+USAGE
+  exit 2
+fi
+
+BUILD_DIR=$1
+IDENTITY=${2:-${SWPASSKEY_IDENTITY:-}}
+MODE=${3:-${SWPASSKEY_MODE:-release}}
 NOTARIZE="${SWPASSKEY_NOTARY_PROFILE:-}"
 case "${4:-}" in
   --notarize) NOTARIZE=${5:?--notarize needs a notarytool keychain profile} ;;
   --notarize=*) NOTARIZE=${4#--notarize=} ;;
 esac
+
+[ -d "$BUILD_DIR" ] || {
+  echo "make_dmg: no build directory '$BUILD_DIR' (run: cmake --preset app)" >&2
+  exit 1
+}
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
