@@ -65,6 +65,7 @@ macOS (CTAP2 daemon + browser bridge):
 | 17 | AAGUID `f8a011f3-…` **Security Key by Yubico** (certified, hardware, same vendor) | **400** | n/a |
 | 18 | AAGUID `2fc0579f-…` **YubiKey 5 NFC 5.2/5.4** (certified, hardware, same family) | **400** | n/a |
 | 19 | AAGUID `39a5647e-…` **IDmelon Authenticator** (phone app; MDS: FIDO_CERTIFIED_L1, hardware + secure_element, basic_full, Vancosys root) | **400** | n/a |
+| 20 | **real IDmelon Authenticator credential** (the app itself, free tier, enrolled through the normal flow) | 200, listed as "IDmelon" | **false** |
 
 Two derived facts worth carrying:
 
@@ -105,6 +106,20 @@ sight and simply carry the hardware flag false.
 Practical consequence: something with a *real* vendor chain that is not a hardware
 purchase qualifies — IDmelon Authenticator (a phone app plus a desktop pairing tool)
 is reported to do exactly that.
+
+Row 20 is decisive for the "any real chain will do" theory: a genuine credential
+from a real app with a real MDS entry is admitted and **labelled from the MDS**
+("IDmelon", not "Passkey") — and the hardware flag is still false. Combined with rows
+1–18 the model that fits every observation is:
+
+```
+admission  = model is on OpenAI's bundle list  OR  attestation chains to that model's MDS anchor
+hardware   = model is on OpenAI's *hardware* list  AND  attestation chains to that model's anchor
+```
+
+The bundle models we can claim (Yubico 5C NFC family, Titan v2) are admitted on sight
+but fail the chain half; every model we could chain to is off the hardware list.
+The two conditions never hold at once for material we can produce.
 
 ## Known dead ends — do not re-propose these
 

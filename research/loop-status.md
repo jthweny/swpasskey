@@ -32,3 +32,4 @@ agent proposes are appended to the queue automatically.
   account owner to enter it; after that the precheck decides the key.
 - IDmelon free tier does not qualify (operator tested); premium tier is reported to.
 - 13 test credentials now on the account from these experiments.
+- 08:55 Any vendor that will issue attestation leaves to a customer (OEM/enterprise attestation pr -> 20261110-085244-any-vendor-that-will-issue-attestation-leaves-to-a-customer-.md

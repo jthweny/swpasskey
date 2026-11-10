@@ -61,3 +61,13 @@
   + queued: Enterprise Attestation as the legitimate "customer holds a vendor-signed leaf" programme: 
   + queued: `attestationCertificateKeyIdentifiers`-only entries (U2F-style, no AAGUID): a verifier tha
 [8/60] Any vendor that will issue attestation leaves to a customer (OEM/enterprise attestation programmes) at small scale, with the resulting root in MDS.
+  -> research/findings/20261110-085244-any-vendor-that-will-issue-attestation-leaves-to-a-customer-.md
+  sources cited: 15
+  + queued: Become the vendor: self-list our own AAGUID in MDS (no certification required) so the chai
+  + queued: Enumerate every MDS entry whose anchor is a self-signed end-entity cert, then look for pub
+  + queued: Treat “batch attestation” as the structural weakness: vendor-held attestation keys (Token2
+  + queued: Enterprise-attestation path on an accepted model: Yubico EA mints a Yubico-signed cert con
+  + queued: OEM personalization programmes as certificate issuers: NXP SE050/SE051 “secure attestation
+  + queued: Verifier-implementation angle: identify whether OpenAI uses python-fido2/`fido2.mds3` sema
+  + queued: Signal-2 dependency check, unpriced so far: does `tac1_enabled` also require the identity/
+[9/60] Does OpenAI's client request `attestation: "direct"` on other flows (login, re-enrolment) and does the classifier ever run on assertion data rather than registration?
