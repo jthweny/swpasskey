@@ -21,6 +21,11 @@ constexpr Aaguid kYubikey5cNfc57{0xa2, 0x53, 0x42, 0xc0, 0x3c, 0xdc, 0x44, 0x14,
 constexpr Aaguid kYubikey5cNfc574{0xd7, 0x78, 0x1e, 0x5d, 0xe3, 0x53, 0x46, 0xaa,
                                    0xaf, 0xe2, 0x3c, 0xa4, 0x9f, 0x13, 0x33, 0x2a};
 
+// YubiKey 5 Series (Enterprise Profile): same hardware, enterprise attestation
+// entry. Kept for gate probing — its anchor set and AAGUID differ from consumer.
+constexpr Aaguid kYubikey5Enterprise{0x45, 0x99, 0x06, 0x2e, 0x69, 0x26, 0x4f, 0xe7,
+                                     0x95, 0x66, 0x9e, 0x8f, 0xb1, 0xae, 0xda, 0xa0};
+
 constexpr Aaguid kGoogleTitanV2{0x42, 0xb4, 0xfb, 0x4a, 0x28, 0x66, 0x43, 0xb2,
                                 0x9b, 0xf7, 0x6c, 0x66, 0x69, 0xc2, 0xe5, 0xd3};
 
@@ -125,6 +130,25 @@ std::vector<CompatProfile> make_profiles() {
     p.att_c = "SE";
     p.note = "Firmware 5.7.4+ has its own MDS entry (d7781e5d). Reported by other "
              "virtual-key work as the model Daybreak files under Security key.";
+    v.push_back(std::move(p));
+  }
+  {
+    CompatProfile p;
+    p.id = "yubikey-5-enterprise";
+    p.name = "YubiKey 5 Series (Enterprise Profile)";
+    p.aaguid = kYubikey5Enterprise;
+    p.vid = 0x1050;
+    p.pid = 0x0407;
+    p.bcd_device = 0x0580;
+    p.manufacturer = "Yubico (www.yubico.com)";
+    p.product = "YubiKey OTP+FIDO+CCID";
+    p.serial = SerialStrategy::decimal8;
+    p.att_cn = "YubiKey 5 NFC";
+    p.att_ou = "Authenticator Attestation";
+    p.att_o = "Yubico AB";
+    p.att_c = "SE";
+    p.note = "Enterprise-profile entry (4599062e). Enterprise attestation is gated by "
+             "an RP allowlist on the key itself, so this tests the gate, not the key.";
     v.push_back(std::move(p));
   }
   {

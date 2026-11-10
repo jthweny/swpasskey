@@ -66,6 +66,10 @@ macOS (CTAP2 daemon + browser bridge):
 | 18 | AAGUID `2fc0579f-…` **YubiKey 5 NFC 5.2/5.4** (certified, hardware, same family) | **400** | n/a |
 | 19 | AAGUID `39a5647e-…` **IDmelon Authenticator** (phone app; MDS: FIDO_CERTIFIED_L1, hardware + secure_element, basic_full, Vancosys root) | **400** | n/a |
 | 20 | **real IDmelon Authenticator credential** (the app itself, free tier, enrolled through the normal flow) | 200, listed as "IDmelon" | **false** |
+| 21 | **A-branch chain**: leaf issued by a CA named `Yubico FIDO Attestation A 1`, x5c = leaf + genuine A-1 + Intermediate A-1 + Root 1 | 200 | false |
+| 22 | packed **self-attestation** (no x5c), Yubico AAGUID | 200 | false |
+| 23 | **reverse AAGUID split**: authData AAGUID = Titan, certificate's AAGUID extension = Yubico | **400** | n/a |
+| 24 | `4599062e` **YubiKey 5 Series (Enterprise Profile)** with the certificate and authData agreeing | 200, resolved by name | false |
 
 Two derived facts worth carrying:
 
@@ -120,6 +124,12 @@ hardware   = model is on OpenAI's *hardware* list  AND  attestation chains to th
 The bundle models we can claim (Yubico 5C NFC family, Titan v2) are admitted on sight
 but fail the chain half; every model we could chain to is off the hardware list.
 The two conditions never hold at once for material we can produce.
+
+Row 23 is a new constraint: the certificate's `id-fido-gen-ce-aaguid` extension is
+**cross-checked against authData**, so a credential cannot borrow one model's label for
+another — their verifier is a proper packed verifier in that respect. Row 24 shows the
+gate admits Yubico models of any edition (consumer, enterprise profile) on sight, and
+the hardware flag stays false for all of them without a genuine chain.
 
 ## Known dead ends — do not re-propose these
 
