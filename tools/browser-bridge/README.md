@@ -122,6 +122,9 @@ extension, which is the mechanism PRF is built on:
 Watch the bridge terminal: one line per ceremony with the AAGUID, format and
 `x5c` count. `swpasskeyctl diagnostics` has the full record.
 
+Run the bridge with `>>` rather than `>`: a restart then keeps the earlier
+ceremonies instead of truncating the only evidence of what just failed.
+
 ## When the page shows nothing and the bridge returns 500
 
 The page's own error handling usually swallows the reason, so the bridge prints it
