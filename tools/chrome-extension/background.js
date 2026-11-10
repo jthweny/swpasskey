@@ -27,9 +27,16 @@ setInterval(refreshBadge, 5000);
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id === undefined) return;
+  // Chrome refuses script injection into its own pages and the Web Store; that is
+  // not an error worth reporting, the panel is the only thing that needs it.
+  const url = tab.url || "";
+  if (!/^https?:/i.test(url)) {
+    await chrome.action.setTitle({ title: "swpasskey bridge: open a website to use the panel" });
+    return;
+  }
   try {
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["panel.js"] });
   } catch (err) {
-    console.error("[swpasskey bridge] cannot inject the panel:", err);
+    console.warn("[swpasskey bridge] panel not injected:", err && err.message ? err.message : err);
   }
 });
