@@ -61,3 +61,5 @@ sends, except for the one signature we cannot produce.
 
 Blocked: the account session expired again (409 invalid_state on /passkeys). When the
 owner signs in: start the bridge, press Add, read the credential flags.
+- 09:15 Cross-reference the Microsoft "Enforced attestation" column as a proxy list of models that -> 20261110-091335-cross-reference-the-microsoft-enforced-attestation-column-as.md
+- 09:17 Check whether the verifier distinguishes `basic_full` from `basic_surrogate` / `AttCA`: ro -> 20261110-091507-check-whether-the-verifier-distinguishes-basic-full-from-bas.md

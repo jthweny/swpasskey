@@ -151,3 +151,23 @@
   -> research/findings/20261110-091305-pursue-the-certification-is-the-attestation-key-fact-from-so.md
   sources cited: 2
 [18/60] Cross-reference the Microsoft "Enforced attestation" column as a proxy list of models that publish *complete* chains: any model marked enforced must already satisfy chain-to-MDS-roots at Microsoft, so that column is a shortlist of AAGUIDs whose chain shape our verifier is most likely to accept.
+  -> research/findings/20261110-091335-cross-reference-the-microsoft-enforced-attestation-column-as.md
+  sources cited: 16
+  + queued: **Read `keyProtection` as the flag's input, not `attestationTypes`.** If OpenAI's `is_non_
+  + queued: **Ship-your-own-AAGUID as the terminal path.** The only construction that satisfies *both*
+  + queued: **Conformance-test authenticators as a test-key trove.** KONAI and NXP both list *conforma
+  + queued: **Ask IDmelon directly.** Their entire product is "phone as a FIDO2 key with real attestat
+  + queued: **`tac1_enabled` correlates to test properly:** whether it flips for accounts with a *seco
+  + queued: **Cross-check the eligibility list against a second RP's enforced list** (e.g. a vendor-pu
+[19/60] Check whether the verifier distinguishes `basic_full` from `basic_surrogate` / `AttCA`: row 12 (`fmt:"none"` → 200, flag false) is consistent with "flag = attestation types that can carry a chain", so a model whose MDS entry declares `basic_surrogate` may accept a *batch* cert that any provisioner can mint.
+  -> research/findings/20261110-091507-check-whether-the-verifier-distinguishes-basic-full-from-bas.md
+  sources cited: 20
+  + queued: Dump all 36 `basic_surrogate` entries with their `keyProtection` values from mds3 — the ha
+  + queued: Windows Hello TPM key attestation "trust based on user credential" (no manufacturer EKCert
+  + queued: How RP libraries map the "uncertainty" outcome and AttCA to policy (SimpleWebAuthn, webaut
+  + queued: Verifier X.509 edge cases per brief angle 7: partial-chain acceptance, path-length/name-co
+  + queued: Ask OpenAI support / the Daybreak troubleshooting guide for the published qualifying-model
+  + queued: MDS-as-vendor route: surrogate-only entries need no anchor (MDS Portal guide) — price FIDO
+  + queued: Entra accepts custom attestation `fmt` strings ≤32 chars on its non-enforced path — probe 
+  + queued: `tac1_enabled` precondition matrix: key count (1 vs 2 qualifying), presence of non-hardwar
+[20/60] Test the reverse-AAGUID split: `authData` AAGUID = an accepted model while the cert's AAGUID extension claims a different (also accepted) model — if the allowlist is read from one source and the chain lookup from the other, a mismatch may satisfy both halves independently.
