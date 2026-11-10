@@ -108,19 +108,32 @@ separately from hypothesis 1 (AAGUID → MDS).
 
 ## 4. Running it
 
-### Build
+### Build a DMG
 
 ```sh
-cmake --preset app           # macOS: static OpenSSL, no TPM
-cmake --build build/app
-packaging/macos/make_app.sh build/app "$(security find-identity -v -p codesigning \
-  | sed -n 's/.*"\(Developer ID Application.*\)"/\1/p' | head -1)" release
+cmake --preset app
+cmake --build build/app -j
+
+IDENTITY="$(security find-identity -v -p codesigning \
+  | sed -n 's/.*"\(Developer ID Application.*\)"/\1/p' | head -1)"
+packaging/macos/make_dmg.sh build/app "$IDENTITY" release --notarize <profile>
+# → dist/swpasskey.dmg
 ```
 
-The virtual HID device needs the signed bundle with the
-`com.apple.developer.hid.virtual.device` entitlement; `make_app.sh` strips it
-when the provisioning profile does not grant it, and `IOHIDUserDeviceCreate`
-then fails. Never commit the profile, the certificates or the keys.
+The DMG holds `swpasskeyd.app` (menu-bar agent, no Dock icon, launches at login
+once enabled) plus a symlink to `/Applications`. Drag it over, open it once, pick
+a profile from the menu bar. Chrome picks the device up live — no restart — and
+the daybreak "add a security key" sheet lists it as a USB key; the Approve panel
+*is* the touch, and the browser creates a PIN when it asks for user verification.
+
+`packaging/macos/README.md` covers the parts that need **your** team: the
+`com.apple.developer.hid.virtual.device` grant (per team, on request), the
+provisioning profile at `packaging/macos/embedded.provisionprofile`, Developer ID
+signing and notarization. Without the grant the app still installs and runs, and
+the menu bar says `No security key (not enumerating)` with the reason instead of
+exiting.
+
+Never commit the profile, the certificates or the keys; `.gitignore` blocks them.
 
 ### Select a profile
 

@@ -32,6 +32,9 @@ struct MenuBarDeps {
   // live value is read from the control socket ("profiles"), so a switch made
   // by `swpasskeyctl` shows up in the menu too.
   std::string profile_label;
+  // Empty when the virtual key is enumerating; otherwise the reason it is not
+  // (almost always a missing com.apple.developer.hid.virtual.device grant).
+  std::string hid_status;
   std::string serial;
   std::string store_path;
   std::string ctl_socket;

@@ -49,6 +49,10 @@ public:
       device_ = IOHIDUserDeviceCreateWithProperties(kCFAllocatorDefault,
                                                     (__bridge CFDictionaryRef)props, 0);
       if (device_ == nullptr) {
+        reason_ =
+            "IOHIDUserDeviceCreate failed - this build is missing the "
+            "com.apple.developer.hid.virtual.device entitlement (needs a signed "
+            ".app whose provisioning profile grants it)";
         log::error("iohid_create_failed",
                    {{"hint", "requires com.apple.developer.hid.virtual.device entitlement "
                              "(signed .app + provisioning profile)"}});
@@ -84,6 +88,7 @@ public:
       });
       IOHIDUserDeviceActivate(device_);
       active_ = true;
+      reason_.clear();
       log::info("iohid_created", {{"product", cfg_.product}, {"serial", cfg_.serial}});
       return {};
     }
@@ -133,6 +138,7 @@ public:
   }
 
   std::string describe() const override { return "IOHIDUserDevice"; }
+  std::string last_error() const override { return reason_; }
 
   // A profile switch cannot mutate an IOHIDUserDevice's properties, so the
   // device is torn down and rebuilt with the new strings. Runs on the HID I/O
@@ -178,6 +184,7 @@ private:
   std::condition_variable cv_;
   std::condition_variable cancel_cv_;
   bool cancelled_{false};
+  std::string reason_;
   std::deque<Report> inbox_;
 };
 

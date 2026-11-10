@@ -167,13 +167,19 @@ endif()
 
 # --- hid transports -----------------------------------------------------------
 if(APPLE)
-  swpk_lib(swpasskey_hid src/hid/iokit_transport.mm src/hid/socket_transport.cpp)
+  swpk_lib(swpasskey_hid
+    src/hid/iokit_transport.mm
+    src/hid/socket_transport.cpp
+    src/hid/unavailable_transport.cpp)
   set_source_files_properties(src/hid/iokit_transport.mm PROPERTIES
     COMPILE_FLAGS "-fobjc-arc")
   target_link_libraries(swpasskey_hid PUBLIC
     "-framework IOKit" "-framework CoreFoundation" "-framework Foundation")
 else()
-  swpk_lib(swpasskey_hid src/hid/uhid_transport.cpp src/hid/socket_transport.cpp)
+  swpk_lib(swpasskey_hid
+    src/hid/uhid_transport.cpp
+    src/hid/socket_transport.cpp
+    src/hid/unavailable_transport.cpp)
 endif()
 target_link_libraries(swpasskey_hid PUBLIC swpasskey_log)
 

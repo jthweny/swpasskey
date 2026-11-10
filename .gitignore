@@ -29,3 +29,6 @@ __pycache__/
 attestation.key
 diagnostics.json
 !packaging/macos/swpasskeyd*.entitlements
+
+# Build output
+dist/

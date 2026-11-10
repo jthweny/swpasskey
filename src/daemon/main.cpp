@@ -279,9 +279,21 @@ int main(int argc, char** argv) {
     std::fputs("swpasskeyd: no HID transport on this platform\n", stderr);
     return 1;
   }
+  std::string hid_status;
   if (!transport->open()) {
-    std::fputs("swpasskeyd: failed to create the virtual HID device (see log)\n", stderr);
-    return 1;
+    // Do not exit: launchd restarts a failed agent, which reads as a flickering
+    // app that never explains itself. Keep the menu bar and the control socket
+    // alive and carry the reason into the UI instead.
+    hid_status = transport->last_error();
+    if (hid_status.empty()) {
+      hid_status = "the virtual HID device could not be created";
+    }
+    std::fprintf(stderr, "swpasskeyd: no security key: %s\n", hid_status.c_str());
+    swpk::log::error("hid_unavailable", {{"reason", hid_status}});
+    transport = swpk::hid::make_unavailable_transport(hid_status);
+    if (!transport->open()) {
+      return 1;
+    }
   }
 
   swpk::daemon::Loop loop(*transport, auth, crypto);
@@ -337,6 +349,7 @@ int main(int argc, char** argv) {
                               {"key_backend", auth.primary_backend_name()},
                               {"probe", probe_detail},
                               {"transport", transport->describe()},
+                              {"hid_status", hid_status.empty() ? "enumerating" : hid_status},
                               {"serial", *serial},
                               {"presence", presence->name()},
                               {"store", opt.store.string()},
@@ -356,6 +369,7 @@ int main(int argc, char** argv) {
     mdeps.version = SWPASSKEY_VERSION;
     mdeps.key_backend = swpk::ui::backend_label(primary->kind());
     mdeps.profile_label = chosen->name + " (" + chosen->aaguid_str + ")";
+    mdeps.hid_status = hid_status;
     mdeps.serial = *serial;
     mdeps.store_path = opt.store.string();
     mdeps.ctl_socket = opt.ctl_socket.string();

@@ -39,6 +39,11 @@ public:
   virtual Result<void> write(std::span<const std::uint8_t, kReportSize> report) = 0;
   // Human-readable node name for logs ("/dev/hidraw3", "IOHIDUserDevice"), may be empty.
   virtual std::string describe() const { return {}; }
+
+  // Why the last open() failed, when it did. Empty while healthy. The daemon
+  // keeps running without a device and shows this string in the menu bar, so a
+  // missing entitlement reads as an instruction instead of a silent exit.
+  virtual std::string last_error() const { return {}; }
   // Re-enumerate with a new identity (VID/PID/product/serial) after a runtime
   // profile switch. Called from the HID I/O thread only, between read() calls,
   // so implementations may close and recreate the device in place. The default
@@ -51,6 +56,12 @@ public:
 // Platform transport: UHID on Linux, IOHIDUserDevice on macOS. Returns
 // nullptr on unsupported platforms.
 std::unique_ptr<Transport> make_transport(DeviceConfig cfg);
+
+// Stand-in used when the real device cannot be created (typically a missing
+// com.apple.developer.hid.virtual.device entitlement). Reports never arrive, so
+// the control socket, menu bar and diagnostics stay usable and the user can see
+// what is wrong instead of watching the app die and launchd restart it.
+std::unique_ptr<Transport> make_unavailable_transport(std::string reason);
 
 // Development-only transport: raw 64-byte reports over a Unix domain socket
 // (SWPASSKEY_HID_SOCKET=/path). Drives the real loop from python-fido2 or a

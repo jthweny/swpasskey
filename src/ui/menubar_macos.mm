@@ -243,6 +243,7 @@ NSTextField* heading(NSString* text) {
   NSStatusItem* item_;
   NSMenu* menu_;
   NSMenuItem* summaryItem_;
+  NSMenuItem* hidStatusItem_;  // reason the key is not enumerating, if any
   NSMenuItem* profileMenuItem_;
   NSMenu* profileMenu_;
   std::string currentProfileId_;
@@ -292,6 +293,10 @@ NSTextField* heading(NSString* text) {
   summaryItem_ = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
   summaryItem_.enabled = NO;
   [menu_ addItem:summaryItem_];
+  hidStatusItem_ = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+  hidStatusItem_.enabled = NO;
+  hidStatusItem_.hidden = YES;
+  [menu_ addItem:hidStatusItem_];
   [menu_ addItem:[NSMenuItem separatorItem]];
   [menu_ addItem:menu_item(@"Passkeys…", @selector(showKeys:), @"k", self)];
   [menu_ addItem:menu_item(@"Settings…", @selector(showSettings:), @",", self)];
@@ -572,6 +577,19 @@ NSTextField* heading(NSString* text) {
 - (void)refreshSummary {
   const std::size_t n = deps_.store != nullptr ? deps_.store->size() : 0;
   summaryItem_.title = ns(swpk::ui::keys_summary(n, deps_.key_backend));
+  summaryItem_.toolTip = nil;
+  if (deps_.hid_status.empty()) {
+    hidStatusItem_.hidden = YES;
+    hidStatusItem_.title = @"";
+  } else {
+    // Browsers cannot see a key that was never enumerated, so the count above is
+    // not the story. Say what is wrong and keep it selectable so it can be read
+    // and copied into a bug report.
+    summaryItem_.title = @"No security key (not enumerating)";
+    summaryItem_.toolTip = ns(deps_.hid_status);
+    hidStatusItem_.hidden = NO;
+    hidStatusItem_.title = [NSString stringWithFormat:@"  %@", ns(deps_.hid_status)];
+  }
   [self syncProfileFromDaemon];
 }
 
@@ -1246,7 +1264,12 @@ NSTextField* heading(NSString* text) {
   NSStackView* folderRow = [NSStackView stackViewWithViews:@[ value(folder), reveal ]];
   folderRow.spacing = 4;
   profileValue_ = value(ns(deps_.profile_label));
+  NSString* keyStatus = deps_.hid_status.empty()
+      ? @"Enumerating as a USB FIDO security key"
+      : [NSString stringWithFormat:@"Not enumerating — %@", ns(deps_.hid_status)];
+  profileValue_ = value(ns(deps_.profile_label));
   NSGridView* grid = [NSGridView gridViewWithViews:@[
+    @[ key(@"Key status:"), value(keyStatus) ],
     @[ key(@"Identifies as:"), profileValue_ ],
     @[ key(@"Key storage:"), value(ns(deps_.key_backend)) ],
     @[ key(@"Serial number:"), value(ns(deps_.serial)) ],
