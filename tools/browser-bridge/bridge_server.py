@@ -42,6 +42,7 @@ from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 
 from cryptography.hazmat.primitives import serialization
+import tpm_statement
 from cryptography.hazmat.primitives.asymmetric import ec
 
 HERE = Path(__file__).resolve().parent
@@ -356,6 +357,9 @@ class Handler(BaseHTTPRequestHandler):
         # SWPASSKEY_BRIDGE_X5C         path to a DER cert to ship as the sole x5c
         # SWPASSKEY_BRIDGE_FMT         "none" emits fmt=none with an empty attStmt
         claim = os.environ.get("SWPASSKEY_BRIDGE_AAGUID")
+        claim_file = os.environ.get("SWPASSKEY_BRIDGE_AAGUID_FILE")
+        if claim_file and os.path.exists(claim_file):
+            claim = open(claim_file).read().strip() or claim
         if claim:
             import uuid as _uuid
             auth_data_der = bytearray(auth_data_der)
@@ -363,7 +367,17 @@ class Handler(BaseHTTPRequestHandler):
             auth_data_der = bytes(auth_data_der)
         exp_fmt = os.environ.get("SWPASSKEY_BRIDGE_FMT", "")
         exp_x5c = os.environ.get("SWPASSKEY_BRIDGE_X5C", "")
-        if exp_fmt == "none":
+        if exp_fmt == "tpm":
+            cred = attestation.auth_data.credential_data.public_key
+            stmt, fmt = tpm_statement.build(
+                auth_data_der, cdh, (cred[-2], cred[-3]),
+                aaguid=bytes(auth_data_der[37:53]),
+                sig_style=os.environ.get("SWPASSKEY_BRIDGE_TPM_SIG", "der"),
+            )
+            exp_fmt = ""  # use att_obj below
+            att_obj = cbor.encode({"fmt": "tpm", "attStmt": stmt, "authData": auth_data_der})
+            print(f"[bridge] EXPERIMENT fmt=tpm sig={os.environ.get('SWPASSKEY_BRIDGE_TPM_SIG','der')}", file=sys.stderr)
+        elif exp_fmt == "none":
             att_obj = cbor.encode({"fmt": "none", "attStmt": {}, "authData": auth_data_der})
             print("[bridge] EXPERIMENT fmt=none, empty attStmt", file=sys.stderr)
         elif exp_x5c:
