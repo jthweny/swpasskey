@@ -201,6 +201,17 @@ probed with every input we control:
 | full Yubico-shaped leaf: AAGUID extension **and** chain **and** CA:FALSE/KU/SKI/AKI, issuer `CN=Yubico FIDO Attestation B 1` | 200 | false |
 
 | same, with **no extension data** (`flags=0x45`, no ED bit, no hmac-secret output) | 200 | false |
+| `d7781e5d-e353-46aa-afe2-3ca49f13332a` — the MDS entry for YubiKey 5/5C NFC **fw 5.7.4+**, reported elsewhere as the model Daybreak allow-lists | 200 | false |
+
+That last one matters because another virtual-key project
+([`isiliconx/hardwarekeyemulator`](https://github.com/isiliconx/hardwarekeyemulator))
+models the Daybreak policy as "AAGUID in an allow-list AND not backup-eligible AND
+cross-platform" and reports PASS for exactly that AAGUID. Measured against the
+live endpoint, the model holds for the *label* — `authenticator_name: "YubiKey 5
+Series with NFC"`, `is_security_key: true` — but not for the gate:
+`is_non_exportable_hardware_key` stays false and `Continue` stays disabled. Their
+own README concedes the same limit ("an RP that pins the genuine vendor root …
+rejects every software authenticator").
 
 That ED-free row removes the last formatting variable: a statement identical in
 shape to what a real key sends when the relying party asks for no extensions is

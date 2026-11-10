@@ -16,6 +16,11 @@ constexpr Aaguid kYubikey5cNfc58{0xf4, 0xce, 0x5f, 0xc0, 0x57, 0xd3, 0x46, 0xf5,
                                  0xa7, 0x36, 0xef, 0xb7, 0xd5, 0xbc, 0x63, 0xb5};
 constexpr Aaguid kYubikey5cNfc57{0xa2, 0x53, 0x42, 0xc0, 0x3c, 0xdc, 0x44, 0x14,
                                  0x8e, 0x46, 0xf4, 0x80, 0x7f, 0xca, 0x51, 0x1c};
+// YubiKey 5 NFC / 5C NFC from firmware 5.7.4 onwards: a separate MDS entry from
+// the 5.7 model, and the one field reports put on the Daybreak allow-list.
+constexpr Aaguid kYubikey5cNfc574{0xd7, 0x78, 0x1e, 0x5d, 0xe3, 0x53, 0x46, 0xaa,
+                                   0xaf, 0xe2, 0x3c, 0xa4, 0x9f, 0x13, 0x33, 0x2a};
+
 constexpr Aaguid kGoogleTitanV2{0x42, 0xb4, 0xfb, 0x4a, 0x28, 0x66, 0x43, 0xb2,
                                 0x9b, 0xf7, 0x6c, 0x66, 0x69, 0xc2, 0xe5, 0xd3};
 
@@ -101,6 +106,25 @@ std::vector<CompatProfile> make_profiles() {
     p.att_c = "SE";
     p.note = "Same model on firmware 5.7: a second MDS AAGUID, useful to tell an "
              "allowlist from an MDS key-protection check.";
+    v.push_back(std::move(p));
+  }
+  {
+    CompatProfile p;
+    p.id = "yubikey-5c-nfc-5.7.4+";
+    p.name = "YubiKey 5C NFC (5.7.4+)";
+    p.aaguid = kYubikey5cNfc574;
+    p.vid = 0x1050;
+    p.pid = 0x0407;
+    p.bcd_device = 0x0574;
+    p.manufacturer = "Yubico (www.yubico.com)";
+    p.product = "YubiKey OTP+FIDO+CCID";
+    p.serial = SerialStrategy::decimal8;
+    p.att_cn = "YubiKey 5C NFC";
+    p.att_ou = "Authenticator Attestation";
+    p.att_o = "Yubico AB";
+    p.att_c = "SE";
+    p.note = "Firmware 5.7.4+ has its own MDS entry (d7781e5d). Reported by other "
+             "virtual-key work as the model Daybreak files under Security key.";
     v.push_back(std::move(p));
   }
   {
