@@ -141,7 +141,8 @@
       response: {
         clientDataJSON: unb64u(json.clientDataJSON),
         attestationObject: unb64u(json.attestationObject),
-        getTransports: () => ["usb"],
+        // Client-declared, so make it switchable: window.__SWPK_TRANSPORTS = ["usb","nfc"]
+        getTransports: () => (Array.isArray(window.__SWPK_TRANSPORTS) ? window.__SWPK_TRANSPORTS : ["usb"]),
         getAuthenticatorData: () => (json.authenticatorData ? unb64u(json.authenticatorData) : null),
         getPublicKey: () => null,
         getPublicKeyAlgorithm: () => json.publicKeyAlgorithm || -7,

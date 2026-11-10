@@ -110,3 +110,8 @@ extension-presence question, newer-unreleased AAGUIDs, and a search for any repo
 - 10:53 Enumerate every MDS entry whose anchor is a self-signed end-entity cert, then look for pub -> 20261110-105255-enumerate-every-mds-entry-whose-anchor-is-a-self-signed-end-.md
 - 10:54 Treat “batch attestation” as the structural weakness: vendor-held attestation keys (Token2 -> 20261110-105332-treat-batch-attestation-as-the-structural-weakness-vendor-he.md
 - 10:55 Enterprise-attestation path on an accepted model: Yubico EA mints a Yubico-signed cert con -> 20261110-105415-enterprise-attestation-path-on-an-accepted-model-yubico-ea-m.md
+- 10:55 OEM personalization programmes as certificate issuers: NXP SE050/SE051 “secure attestation -> 20261110-105505-oem-personalization-programmes-as-certificate-issuers-nxp-se.md
+- 10:57 Verifier-implementation angle: identify whether OpenAI uses python-fido2/`fido2.mds3` sema -> 20261110-105541-verifier-implementation-angle-identify-whether-openai-uses-p.md
+- 10:57 Signal-2 dependency check, unpriced so far: does `tac1_enabled` also require the identity/ -> 20261110-105716-signal-2-dependency-check-unpriced-so-far-does-tac1-enabled-.md
+- 10:58 Client-declared `transports` / `authenticatorAttachment` / `credProps` are the only inputs -> 20261110-105756-client-declared-transports-authenticatorattachment-credprops.md
+- 10:59 The AAS enrolment lives on `auth.openai.com`, a different origin (and possibly different R -> 20261110-105854-the-aas-enrolment-lives-on-auth-openai-com-a-different-origi.md

@@ -467,3 +467,48 @@
   + queued: Read the registration options before any more attestation work: if `attestation` is `"none
   + queued: Ask whether the flag is recomputed from `keyProtection` + `attachment` + model list on eac
 [27/60] OEM personalization programmes as certificate issuers: NXP SE050/SE051 “secure attestation” customer-defined attestation keys and CA-signed certs, Infineon SECORA ID Key FIDO2 Java Card personalization, Feitian OpenSK dongle (customer-injected cert/AAGUID) — each needs one sourced answer to “will you sign *our* key under *your* MDS-listed root”.
+  -> research/findings/20261110-105505-oem-personalization-programmes-as-certificate-issuers-nxp-se.md
+  sources cited: 7
+  + queued: The flag's namespace is vendor-written metadata, not vendor-signed cryptography — so the c
+  + queued: MDS is BLOB-signed by the FIDO Alliance, so a vendor cannot silently add your key hash — t
+  + queued: Snapshot-age as an exploit surface: any AAGUID added to MDS after OpenAI's snapshot is inv
+  + queued: `fido-u2f` and `android-key` remain entirely unmeasured as formats; the all-zero AAGUID me
+  + queued: Watch `attestationTypes: ["basic_surrogate"]` entries: they assert hardware key protection
+  + queued: The deny component (TrustKey) is the only observed *subtractive* rule; nothing has probed 
+[28/60] Verifier-implementation angle: identify whether OpenAI uses python-fido2/`fido2.mds3` semantics for chain validation; if so, reproduce the exact pass/fail of rows 1–19 offline against their resolver to find the boundary case (self-signed anchor, missing AAGUID extension, cert-length/path-len) instead of brute-forcing live enrolments.
+  -> research/findings/20261110-105541-verifier-implementation-angle-identify-whether-openai-uses-p.md
+  sources cited: 10
+  + queued: **The name-matching root selector is a second, weaker trust model than path building.** Re
+  + queued: **Exception-class mapping as the flag's fail-open edge.** Non-RSA/EC anchors produce `Inva
+  + queued: **Identifier-only entries.** `MetadataBlobPayloadEntry.attestationCertificateKeyIdentifier
+  + queued: **RSA exponent surface.** python-fido2's chain verification hard-codes `padding.PKCS1v15()
+  + queued: **Bundle-drift as the actual lever.** Row 27 and the TrustKey reversal say the accepted se
+  + queued: **`isKeyRestricted` / `alternativeDescriptions`.** Both are parsed and unused by every Pyt
+[29/60] Signal-2 dependency check, unpriced so far: does `tac1_enabled` also require the identity/Persona step, a minimum key count, or a second distinct key, independent of signal 1? Enrol the same credential twice and diff `cyber_verification/status` at t+2/10/30 to separate credential-gated from account-gated conditions.
+  -> research/findings/20261110-105716-signal-2-dependency-check-unpriced-so-far-does-tac1-enabled-.md
+  sources cited: 7
+  + queued: **Entitlement confound first, credentials second.** Before any further forgery work, estab
+  + queued: **Two-predicate split.** AAS completion ignores the hardware flag while Daybreak's docs de
+  + queued: **`qualifying_count` as the real name of the game.** If it counts *admitted* credentials r
+  + queued: **Historical MDS blob diffing** (carried from the brief, now with a concrete method): many
+  + queued: **Community JSON harvest for signal 1 = true.** Search GitHub issues, HAR pastes and suppo
+  + queued: **`extensions` / `credProtect` and `hmac-secret` flags.** These ride in `authData` unauthe
+[30/60] Client-declared `transports` / `authenticatorAttachment` / `credProps` are the only inputs in the registration POST that are unsigned *and* client-chosen; a classifier that couldn't anchor attestation may have fallen back to them — the highest-value unexplored variable set.
+  -> research/findings/20261110-105756-client-declared-transports-authenticatorattachment-credprops.md
+  sources cited: 7
+  + queued: Enumerate the accepted set deliberately: one enrol per AAGUID in the local MDS cache (batc
+  + queued: Target MDS entries with `attestationTypes` containing `attestation_ca_ca` or `basic_surrog
+  + queued: "Customer-generated attestation key" dev kits, per the brief's own exception clause: OpenS
+  + queued: Error-differential oracle: enrol with `["internal","hybrid"]` + `"platform"` (the iCloud-K
+  + queued: Ask OpenAI support, in writing, what distinguishes a "hardware security key" from a passke
+  + queued: Check whether `refresh_status` or the passkeys endpoint accepts a forced re-evaluation par
+[31/60] The AAS enrolment lives on `auth.openai.com`, a different origin (and possibly different RP ID) from `chatgpt.com` — map both origins' credential lists and enrolment endpoints; a credential enrolled at one origin may not be the record the Daybreak check reads.
+  -> research/findings/20261110-105854-the-aas-enrolment-lives-on-auth-openai-com-a-different-origi.md
+  sources cited: 5
+  + queued: **The `openai.com` family as a fresh-verifier surface.** Any OpenAI origin whose RP ID is 
+  + queued: **Does the flag live on the credential or on the account?** Answered for free by experimen
+  + queued: **Which credential does the `chatgpt.com` gate actually want?** If experiment 4 shows `att
+  + queued: **Capture the Daybreak step's `challenge` response body** (the `POST /backend-api/cyber_ve
+  + queued: **Look for a credential-id join across origins.** If both lists expose credential ids, com
+  + queued: **Re-check the digest's "AAS enrolment completes" claim for origin provenance** before tre
+[32/60] Chrome's direct-attestation **consent prompt** is a free side channel for whether `attestation:"direct"` was actually requested on a given surface — observe it once, no proxy needed.
