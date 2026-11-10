@@ -58,6 +58,10 @@ macOS (CTAP2 daemon + browser bridge):
 | 10 | AAGUID `5df66f62-…` (Securitag, hardware, **anchor is a leaf cert**) + that exact public anchor as `x5c`, placeholder sig | **400 `passkey_verification_failed`** | n/a |
 | 11 | AAGUID `5df66f62-…` + our own self-signed cert (isolates AAGUID from cert) | **400** | n/a |
 | 12 | Yubico AAGUID, `fmt: "none"`, empty attStmt (no attestation at all) | 200 | false |
+| 13 | AAGUID `5ca1ab1e-…` Allthenticator iOS (app authenticator in MDS, hardware + secure_element) | **400** | n/a |
+| 14 | AAGUID `bb878d7b-…` TruU FIDO2 (FIDO_CERTIFIED_L1, hardware, **zero trust anchors**) | **400** | n/a |
+| 15 | Yubico AAGUID + `fmt: "tpm"`, spec-shaped statement, DER signature | **400** | n/a |
+| 16 | Yubico AAGUID + `fmt: "tpm"`, raw TPMT_SIGNATURE | **400** | n/a |
 
 Two derived facts worth carrying:
 
@@ -73,6 +77,12 @@ separate from the MDS, and the end-entity-anchor class cannot be reached through
 Row 12: enrolment accepts a statement with no attestation at all for an accepted
 model, and the hardware flag is still false — so the flag is not evidence-of-any-
 attestation, it is evidence-of-a-*valid* one (or a separate internal list).
+
+Rows 13–14 close the anchorless and app-authenticator classes: the model gate refuses
+them before attestation is examined. Rows 15–16 close the TPM avenue —
+`tools/browser-bridge/tpm_statement.py` builds a statement python-fido2 accepts as
+`ATT_CA` from entirely local material, and OpenAI refuses it in both signature
+encodings. Only `packed` on an accepted model is admitted.
 
 ## Known dead ends — do not re-propose these
 
