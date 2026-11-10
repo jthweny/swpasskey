@@ -171,3 +171,21 @@
   + queued: Entra accepts custom attestation `fmt` strings ≤32 chars on its non-enforced path — probe 
   + queued: `tac1_enabled` precondition matrix: key count (1 vs 2 qualifying), presence of non-hardwar
 [20/60] Test the reverse-AAGUID split: `authData` AAGUID = an accepted model while the cert's AAGUID extension claims a different (also accepted) model — if the allowlist is read from one source and the chain lookup from the other, a mismatch may satisfy both halves independently.
+  -> research/findings/20261110-091753-test-the-reverse-aaguid-split-authdata-aaguid-an-accepted-mo.md
+  sources cited: 9
+  + queued: Enumerate MDS entries with `protocolFamily: fido2` but non-CTAP/software backing and `atte
+  + queued: `attestationCertificateKeyIdentifier` keying: build an `fido-u2f` statement (fmt not yet m
+  + queued: Cross-check `authenticator_name` echo as a passive oracle across *all* future experiments 
+  + queued: Given the GHSA-6hxq-p678-4hr2 class (anchor bound to `x5c` terminal rather than a policy s
+  + queued: Revisit `tac1_enabled` determinants (avenue 4) with the split rows: if any row yields flag
+[21/60] Add a fresh-account control: enrol a *real* YubiKey (5C NFC, 5.8) on a new account and poll signals 1–2 at the same t+2/10/30 cadence, to establish the ground-truth latency and whether a genuine key ever shows `false` — that single baseline tells us whether the flag is cryptographic or operator-set.
+  -> research/findings/20261110-091903-add-a-fresh-account-control-enrol-a-real-yubikey-5c-nfc-5-8-.md
+  sources cited: 17
+  + queued: If experiment 2 shows a bundle-specific AAGUID: retry experiments 3–5 claiming *that* AAGU
+  + queued: Enterprise attestation angle: Yubico Enterprise Profile keys return per-RP enterprise atte
+  + queued: Grep the local MDS BLOB for SoloKeys' published "default" attestation certificate (from `s
+  + queued: The "unsupported keys" list is operator-maintained and grew after support cases; the threa
+  + queued: Costed MDS route confirmed cheap enough to plan: $3,250 Associate membership + optional ce
+  + queued: Verifier X.509 edge cases beyond anchor-as-leaf: cross-signed duplicate anchors in `x5c`, 
+  + queued: Track the Forrester-vs-Support contradiction ("supports other FIDO-compatible hardware key
+[22/60] **Enterprise attestation as a separate gate.** YubiKeys on EA‑capable firmware produce per‑device EA certs with the serial in the DN, and FIDO publishes EA test material including private keys. Check whether OpenAI requests `attestation: "enterprise"` and whether the flag keys off `getClientExtensionResults().enterpriseAttestation` rather than `packed` chain validity — an EA‑only requirement would explain why every packed chain we mint is uniformly `false` regardless of anchor.

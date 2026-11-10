@@ -253,6 +253,13 @@ int main(int argc, char** argv) {
   acfg.identity = identity;
   acfg.attestation_key_path = data_dir / "attestation.key";
   acfg.diag = &diag_registry;
+  // SWPASSKEY_ATTEST_MODE=self emits upstream packed self-attestation (no x5c) so
+  // the WebAuthn "self" branch can be tested against an accepted model AAGUID.
+  if (const char* mode = std::getenv("SWPASSKEY_ATTEST_MODE"); mode != nullptr && *mode != 0) {
+    if (std::strcmp(mode, "self") == 0) {
+      acfg.attestation_mode = swpk::ctap::AttestationMode::self_only;
+    }
+  }
   if (const char* chain = std::getenv("SWPASSKEY_ATTEST_CHAIN"); chain != nullptr && *chain != 0) {
     acfg.attestation_chain_dir = std::filesystem::path(chain);
   }
