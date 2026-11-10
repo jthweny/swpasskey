@@ -76,6 +76,7 @@ EOF
     continue
   fi
   echo "  -> ${FILE#$ROOT/}"
+  printf -- "- %s %s -> %s\n" "$(date +%H:%M)" "${ANGLE:0:90}" "$(basename "$FILE")" >> "$ROOT/research/loop-status.md"
   grep -c "http" "$FILE" >/dev/null 2>&1 && echo "  sources cited: $(grep -c 'http' "$FILE")"
   append_angles "$FILE"
   mark_done "$ANGLE"

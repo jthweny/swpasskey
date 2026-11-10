@@ -62,6 +62,8 @@ macOS (CTAP2 daemon + browser bridge):
 | 14 | AAGUID `bb878d7b-…` TruU FIDO2 (FIDO_CERTIFIED_L1, hardware, **zero trust anchors**) | **400** | n/a |
 | 15 | Yubico AAGUID + `fmt: "tpm"`, spec-shaped statement, DER signature | **400** | n/a |
 | 16 | Yubico AAGUID + `fmt: "tpm"`, raw TPMT_SIGNATURE | **400** | n/a |
+| 17 | AAGUID `f8a011f3-…` **Security Key by Yubico** (certified, hardware, same vendor) | **400** | n/a |
+| 18 | AAGUID `2fc0579f-…` **YubiKey 5 NFC 5.2/5.4** (certified, hardware, same family) | **400** | n/a |
 
 Two derived facts worth carrying:
 
@@ -84,6 +86,13 @@ them before attestation is examined. Rows 15–16 close the TPM avenue —
 `ATT_CA` from entirely local material, and OpenAI refuses it in both signature
 encodings. Only `packed` on an accepted model is admitted.
 
+Rows 17–18 are the sharpest constraint yet: the gate is not vendor-wide and not
+family-wide. A *Security Key by Yubico* is refused; a *YubiKey 5 NFC on firmware
+5.2/5.4* is refused; only the current 5C NFC entries (`f4ce5fc0`, `d7781e5d`,
+`a25342c0`) and Google Titan v2 (`42b4fb4a`) enrol. So the accepted list is a short
+allowlist of **specific current models**, not a property of the vendor, the
+certification level, or the key protection class.
+
 ## Known dead ends — do not re-propose these
 
 * Self-signed / self-chained / real-roots-appended / issuer-name-spoofed chains.
@@ -96,6 +105,29 @@ encodings. Only `packed` on an accepted model is admitted.
   *specific, sourced* exception (e.g. a vendor that issues attestation leaves to
   customers, a dev kit whose attestation key is customer-generated, a public
   attestation-certificate issuance service).
+
+## Current scope (set by the operator)
+
+**Map OpenAI's accepted-model gate, and find whether any accepted model has
+attestation material a software authenticator can legitimately hold.**
+
+Measured facts that scope everything else:
+
+* Enrolment admits only a narrow set of models. Yubico (`f4ce5fc0`, `d7781e5d`,
+  `a25342c0`) and Google Titan v2 (`42b4fb4a`) enrol (200). Securitag
+  `5df66f62`, OnlyKey `998f358b`, TruU `bb878d7b`, Allthenticator iOS `5ca1ab1e`
+  are refused (400) — regardless of the certificate supplied.
+* Only `fmt: "packed"` is admitted. `fmt: "tpm"` (both signature encodings, built
+  to spec and accepted by python-fido2 as ATT_CA) is refused. `fmt: "none"` is
+  accepted but sets no hardware flag.
+* The hardware flag is false for every attestation we can mint, including a
+  full Yubico-shaped leaf and chains appended with the genuine Yubico roots.
+
+So the open questions are: **what exactly is on the accepted list** (is it model,
+vendor, certification level, or something else), **is that list published or
+inferable**, and **does any accepted model's MDS entry describe a trust anchor or
+attestation type that a non-vendor can satisfy**. Secondary: does `tac1_enabled`
+depend on anything other than the credential (identity check, key count, time)?
 
 ## Open avenues worth attacking
 
