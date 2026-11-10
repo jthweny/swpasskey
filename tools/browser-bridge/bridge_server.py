@@ -330,6 +330,8 @@ class Handler(BaseHTTPRequestHandler):
             options["uv"] = True
         prf_in = body.get("prf")
         want_prf = prf_in is True or (isinstance(prf_in, dict) and bool(prf_in.get("create")))
+        if os.environ.get("SWPASSKEY_BRIDGE_NO_PRF") == "1":
+            want_prf = False  # experiment: omit extension data entirely
         ctap_ext = {"hmac-secret": True} if want_prf else None
         with CtapSession(self.hid_socket, Handler.pin) as ctap:
             pin_uv = None

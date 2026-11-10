@@ -200,6 +200,12 @@ probed with every input we control:
 | **Google Titan v2** AAGUID with the same self-signed statement | 200 | false |
 | full Yubico-shaped leaf: AAGUID extension **and** chain **and** CA:FALSE/KU/SKI/AKI, issuer `CN=Yubico FIDO Attestation B 1` | 200 | false |
 
+| same, with **no extension data** (`flags=0x45`, no ED bit, no hmac-secret output) | 200 | false |
+
+That ED-free row removes the last formatting variable: a statement identical in
+shape to what a real key sends when the relying party asks for no extensions is
+still refused.
+
 That last row closes the gap in the earlier matrix: every earlier failure either had
 the AAGUID extension without a chain, or a chain without the extension. With both,
 and with the extension set, the statement still does not satisfy their check —
