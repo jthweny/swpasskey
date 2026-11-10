@@ -38,6 +38,34 @@ That is verified: with the bridge stopped, `create()` returns Chrome's own
 rejection (`SecurityError: This is an invalid domain.` on the test page, whose rpId
 deliberately does not match its origin) rather than a bridge error.
 
+## The panel: state, and pressing the button for you
+
+Click the toolbar icon (a small panel appears bottom-right; the icon's badge shows
+`ok` when the bridge answers, `!` when it does not):
+
+```
+swpasskey bridge                          ready  ✕
+last registration    packed · f4ce5fc0-… · x5c 1
+last assertion       signCount 2 · flags 0x85
+[ Find the security-key button ]
+[ Press it ]
+```
+
+* **Find** scans the page for controls whose text looks like adding a security
+  key or passkey (`add a security key`, `create passkey`, …), scores them, draws a
+  green outline around the best match, scrolls it into view, and **names it** in
+  the note line. Nothing is clicked.
+* **Press** clicks that one control, once.
+
+Clicking is deliberately two steps: the panel always tells you which control it
+picked before anything happens, so a UI change shows up as a wrong name rather
+than a wrong action. It also means an accidental click cannot add a key to an
+account you did not mean to touch.
+
+The panel reads the ceremony results from the page-side shim as they happen, so
+`last registration` fills in with the format, AAGUID and `x5c` count the site
+received — no console, no bridge terminal needed for the headline facts.
+
 ## Narrowing it
 
 `manifest.json` matches `<all_urls>`. To restrict it to the site under test:

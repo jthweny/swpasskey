@@ -340,6 +340,7 @@ class Handler(BaseHTTPRequestHandler):
             "flags": parsed["flags"],
             "x5c": len(attestation.att_stmt.get("x5c") or []),
             "clientExtensionResults": create_extension_results(attestation, want_prf),
+            "rpId": rp["id"],
             "publicKeyAlgorithm": -7,
         }
         print(
@@ -395,6 +396,7 @@ class Handler(BaseHTTPRequestHandler):
             "userHandle": b64u(assertion.user["id"]) if assertion.user else None,
             "flags": parsed["flags"],
             "sign_count": parsed["sign_count"],
+            "rpId": body["rpId"],
             "clientExtensionResults": {},
         }
         if ctap_ext is not None:

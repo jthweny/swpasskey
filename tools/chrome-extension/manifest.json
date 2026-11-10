@@ -5,6 +5,13 @@
   "description": "Route this page's WebAuthn calls to the local swpasskey daemon, so the site sees a security key without any USB device.",
   "minimum_chrome_version": "111",
   "host_permissions": ["http://localhost:3000/*"],
+  "permissions": ["scripting", "activeTab"],
+  "action": {
+    "default_title": "swpasskey bridge: click to open the panel"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

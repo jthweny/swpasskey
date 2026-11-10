@@ -305,6 +305,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/ext/inject.js": HERE.parent / "chrome-extension" / "inject.js",
                 "/ext/relay.js": HERE.parent / "chrome-extension" / "relay.js",
                 "/ext/bridge.js": HERE.parent / "browser-bridge" / "bridge.js",
+                "/ext/panel.js": HERE.parent / "chrome-extension" / "panel.js",
             }
             file = allowed.get(path)
             if file is not None and file.is_file():

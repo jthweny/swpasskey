@@ -60,6 +60,14 @@
     return out.buffer;
   };
 
+  const announce = (data) => {
+    try {
+      window.dispatchEvent(new CustomEvent("__swpasskey_ceremony", { detail: JSON.stringify(data) }));
+    } catch (e) {
+      /* the panel is optional */
+    }
+  };
+
   const extensionResults = (result) => {
     const out = result || {};
     if (out.prf && out.prf.results) {
@@ -112,6 +120,15 @@
       console.error("[swpasskey bridge] " + (json.error || "refused"));
       throw new DOMException(json.error || "bridge refused", "NotAllowedError");
     }
+    announce({
+      kind: "create",
+      fmt: json.fmt,
+      aaguid: json.aaguid,
+      x5c: json.x5c,
+      flags: json.flags,
+      sign_count: json.sign_count,
+      rp: json.rpId,
+    });
     return {
       id: json.credentialId,
       rawId: unb64u(json.credentialId),
@@ -171,6 +188,12 @@
       console.error("[swpasskey bridge] " + (json.error || "refused"));
       throw new DOMException(json.error || "bridge refused", "NotAllowedError");
     }
+    announce({
+      kind: "get",
+      flags: json.flags,
+      sign_count: json.sign_count,
+      rp: json.rpId,
+    });
     return {
       id: json.credentialId,
       rawId: unb64u(json.credentialId),
