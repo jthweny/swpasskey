@@ -1,0 +1,123 @@
+# Browser bridge
+
+Runs the WebAuthn ceremony for a page out of `swpasskeyd` instead of out of a USB
+HID device. The relying party receives a **real** CTAP2 attestation — the selected
+profile's AAGUID, a packed statement with an `x5c` certificate — produced by its
+own page, in its own origin, from its own challenge.
+
+This is the answer to the macOS kernel gate: `IOHIDUserDevice` needs an
+entitlement Apple has not granted (see `docs/entitlement-request.md`), but nothing
+about the relying party's decision depends on a USB device existing. It reads the
+attestation object.
+
+```
+page JS  →  navigator.credentials.create()  →  bridge.js (in the page)
+                                                    │  fetch to 127.0.0.1:8100
+                                              bridge_server.py
+                                                    │  CTAP2 over a Unix socket
+                                              swpasskeyd  (socket transport)
+```
+
+## Verified in a real browser
+
+Chrome, on a page requesting `attestation: "direct"`, `cross-platform`,
+`residentKey: required`, `userVerification: required` — the same options as the
+target site. What the page received:
+
+```
+fmt=packed  x5c=1  aaguid=f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5
+subject=/C=SE/O=Yubico AB/OU=Authenticator Attestation/CN=YubiKey 5C NFC
+AAGUID extension=f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5
+flags=UP,UV,AT   BE=0  BS=0   signCount=1   credProps.rk=true   transports=usb
+```
+
+and the discoverable sign-in that followed: `flags=UP,UV`, `signCount=2`, user
+handle returned.
+
+## Run it
+
+Three terminals, or one with `&`.
+
+**1. The daemon, socket transport** (no HID device, so no entitlement needed;
+`--testing` auto-approves the presence panel and exists only in Debug builds):
+
+```sh
+cd ~/VirtualYubi/swpasskey
+cmake --preset debug
+cmake --build build/debug -j
+python3 -m venv .venv
+.venv/bin/pip install -q fido2
+export SWPASSKEY_HID_SOCKET=/tmp/swpk.sock
+export SWPASSKEY_LOG=warn
+build/debug/swpasskeyd --testing --key-backend=software \
+  --store /tmp/swpk-bridge.bin --ctl-socket /tmp/swpk-bridge.sock &
+sleep 2
+```
+
+**2. Pick the identity under test** (this is what the relying party classifies):
+
+```sh
+build/debug/swpasskeyctl --socket /tmp/swpk-bridge.sock set-profile yubikey-5c-nfc-5.8
+build/debug/swpasskeyctl --socket /tmp/swpk-bridge.sock attestation
+```
+
+**3. The bridge**, with a PIN for user verification. The daemon has none by
+default, so the bridge sets this one on first use:
+
+```sh
+SWPASSKEY_BRIDGE_PIN=123456 .venv/bin/python tools/browser-bridge/bridge_server.py --hid-socket /tmp/swpk.sock
+```
+
+## Point it at the real site
+
+1. Open the site's sign-in page and get to the screen that offers **add a security
+   key** (not "this device" / not "passkey in this browser").
+2. Open DevTools → Console. Paste the entire contents of
+   `tools/browser-bridge/bridge.js`. It prints
+   `[swpasskey bridge] WebAuthn routed to http://127.0.0.1:8100`.
+3. Choose the security-key option and press the site's own **Continue / Add
+   security key** button.
+4. The site's `navigator.credentials.create()` reaches the bridge; the daemon
+   produces the attestation; the site posts it to its backend, which is where the
+   classification happens.
+
+Watch the bridge terminal: one line per ceremony with the AAGUID, format and
+`x5c` count. `swpasskeyctl diagnostics` has the full record.
+
+## What is real, and what is not
+
+Real: the CTAP2 ceremony, the credential key (Secure Enclave / TPM / software,
+depending on the daemon), the signature, the attestation certificate, the AAGUID,
+the `clientDataJSON` (the page's own origin and challenge, hashed by the bridge
+exactly as a browser would), `authData` flags, the signature counter.
+
+Not real: there is no USB device. The credential object reports
+`authenticatorAttachment: "cross-platform"`, `getTransports() → ["usb"]` and
+`credProps.rk: true` so the page sees what a plugged-in key reports, but that is a
+description, not a device. Anyone who inspects the machine's USB tree sees
+nothing, and `iohid` never runs.
+
+Consequences worth knowing before you read a verdict from this:
+
+* It measures the **relying party's classifier**, which is the question. It does
+  not prove the same key would pass a browser-level check, an MDM policy, or a
+  USB attestation collector.
+* If a site hides its security-key option behind
+  `PublicKeyCredential.getClientCapabilities()` or conditional UI, the shim does
+  not patch those yet; say so and it can be added.
+* Some consoles block pasted code (`self-XSS` warning): type `allow pasting`, then
+  paste. Pasting into the console is not subject to the page's CSP; injecting with
+  `fetch(...).then(eval)` is, so prefer the paste for strict sites.
+* The page talks to `http://127.0.0.1:8100`, a loopback address, which browsers
+  treat as trustworthy even from an HTTPS page. Nothing leaves the machine.
+
+## Limits of the shim
+
+* One ceremony at a time is fine; the bridge opens a fresh CTAPHID channel per
+  request, so parallel tabs work.
+* `navigator.credentials.create/get` are replaced on the page's
+  `navigator.credentials` object. A page that captured a reference to the original
+  before injection keeps using it; inject before its scripts run
+  (`Page.addScriptToEvaluateOnNewDocument`) or reload after pasting.
+* Assertions honour `allowCredentials` and discoverable selection; conditional
+  mediation (autofill) is not implemented.
