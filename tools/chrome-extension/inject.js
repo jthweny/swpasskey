@@ -70,6 +70,10 @@
 
   const extensionResults = (result) => {
     const out = result || {};
+    // P6 probe: clientExtensionResults rides to the server verbatim, so a
+    // client-asserted enterprise-attestation flag can be tested without any
+    // authenticator change. Off unless the page sets it before load.
+    if (window.__SWPK_FAKE_EP === true) out.enterpriseAttestation = true;
     if (out.prf && out.prf.results) {
       const results = {};
       for (const key of Object.keys(out.prf.results)) results[key] = unb64u(out.prf.results[key]);

@@ -70,6 +70,8 @@ macOS (CTAP2 daemon + browser bridge):
 | 22 | packed **self-attestation** (no x5c), Yubico AAGUID | 200 | false |
 | 23 | **reverse AAGUID split**: authData AAGUID = Titan, certificate's AAGUID extension = Yubico | **400** | n/a |
 | 24 | `4599062e` **YubiKey 5 Series (Enterprise Profile)** with the certificate and authData agreeing | 200, resolved by name | false |
+| 25 | `clientExtensionResults.enterpriseAttestation: true` asserted by the shim (that JSON rides to the server verbatim) | 200 | false |
+| 26 | AAGUID `0f083f18` **Security Key C NFC 5.8** — the retail $29 model users report working | 200, "Security Key Series with NFC (Consumer Profile)" | false |
 
 Two derived facts worth carrying:
 
@@ -130,6 +132,14 @@ Row 23 is a new constraint: the certificate's `id-fido-gen-ce-aaguid` extension 
 another — their verifier is a proper packed verifier in that respect. Row 24 shows the
 gate admits Yubico models of any edition (consumer, enterprise profile) on sight, and
 the hardware flag stays false for all of them without a genuine chain.
+
+Row 25 removes the client-asserted EA hypothesis: `clientExtensionResults` reaches the
+server unaltered and asserting `enterpriseAttestation` changes nothing. Row 26 shows
+the 2023+ Security Key series *is* admitted (its 2019 predecessor `f8a011f3` is not),
+so admission tracks currently marketed models while the evidence requirement does not.
+FIDO's enterprise-attestation test PKI is not in the MDS, so its published private key
+buys nothing. TrustKey's real keys carry genuine chains and are still labelled
+"Passkey", so OpenAI applies an active deny component on top of classification.
 
 ## Known dead ends — do not re-propose these
 

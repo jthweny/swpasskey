@@ -190,3 +190,41 @@
   + queued: Track the Forrester-vs-Support contradiction ("supports other FIDO-compatible hardware key
 [22/60] **Enterprise attestation as a separate gate.** YubiKeys on EA‑capable firmware produce per‑device EA certs with the serial in the DN, and FIDO publishes EA test material including private keys. Check whether OpenAI requests `attestation: "enterprise"` and whether the flag keys off `getClientExtensionResults().enterpriseAttestation` rather than `packed` chain validity — an EA‑only requirement would explain why every packed chain we mint is uniformly `false` regardless of anchor.
 [1/80] **Enterprise attestation as a separate gate.** YubiKeys on EA‑capable firmware produce per‑device EA certs with the serial in the DN, and FIDO publishes EA test material including private keys. Check whether OpenAI requests `attestation: "enterprise"` and whether the flag keys off `getClientExtensionResults().enterpriseAttestation` rather than `packed` chain validity — an EA‑only requirement would explain why every packed chain we mint is uniformly `false` regardless of anchor.
+  -> research/findings/20261110-095803--enterprise-attestation-as-a-separate-gate-yubikeys-on-ea-ca.md
+  sources cited: 15
+  + queued: Static analysis of the chatgpt.com frontend bundle: grep served JS for `attestation` conve
+  + queued: Ground-truth EA row from real hardware: one EA-capable key (fw 5.7.4+ custom-programmed, o
+  + queued: Cross-UA comparison of the same enrolment (Chrome vs Safari vs Firefox) — Firefox lacks EA
+  + queued: 400-response taxonomy from existing captures: diff the stored failure bodies of rows 10–19
+  + queued: Audit the four admitted models' MDS `attestationTypes`/`attestationRootCertificates` (`f4c
+  + queued: If exp 2/3/5 flip signal 1: immediately run the Daybreak end state and the second-key vari
+[2/80] **RP trust-store vintage as an attack surface.** Cloudflare's case shows RPs pin/sync a specific MDS BLOB and reject chains whose root arrived in a later blob (Yubico 5.7.x = BLOB 127). Determine which BLOB OpenAI's verifier is pinned to by submitting leaves chaining to anchors introduced in different blobs (`Yubico FIDO Root CA Serial 450203556`, `U2F Root CA 457200631`, `Attestation Root 1`) and see which vintages are even reachable.
+  -> research/findings/20261110-100055--rp-trust-store-vintage-as-an-attack-surface-cloudflare-s-ca.md
+[3/80] **OEM/attestation‑provisioning programmes** where the *customer* holds the attestation key: NXP EdgeLock SE05x and Infineon OPTIGA provisioning services, Token2 programmable tokens, and Feitian's customisation line — the question to ask each vendor is narrow and answerable: "will you sign a customer‑supplied leaf under your MDS‑listed root, and will you list the resulting AAGUID."
+  -> research/findings/20261110-100115--oem-attestation-provisioning-programmes-where-the-customer-.md
+  sources cited: 14
+  + queued: Vendor questionnaire round with the narrow binary question ("sign a customer-supplied leaf
+  + queued: SoloKeys Solo 1 hacker attestation key hunt in `solokeys/solo1` (`keys/` tree, factory too
+  + queued: Own-AAGUID programme as a months-scale parallel track: Associate membership + L1 (software
+  + queued: EdgeLock SE05x C/E/F + `ssscli` read of the factory NXP-signed attestation certificate as 
+  + queued: Sectigo IoT Identity / Avnet mass pre-provisioning: establish whether the signing root can
+  + queued: `tac1_enabled` independence: after experiment 1, cross-correlate flag state with credentia
+[4/80] **MDS portal economics for our own AAGUID** (FIDO membership tier, L1 vs L2, BLOB signing, and what `keyProtection` a software authenticator is permitted to claim) — read the MDS Portal user guides and the certification policy, then price it.
+  -> research/findings/20261110-100341--mds-portal-economics-for-our-own-aaguid-fido-membership-tie.md
+  sources cited: 16
+  + queued: The one legitimate hardware-claim route for a *software* product: a CTAP2 daemon whose FID
+  + queued: Certification-level hypothesis for signal 1: buy the cheapest L2 key on the market (Token2
+  + queued: Self-certification checklist path (`SELF_ASSERTION_SUBMITTED`): locate the checklist FIDO 
+  + queued: Lab-affiliation route: read the Security *Lab* (not biometrics) Accreditation Policy for t
+  + queued: BLOB propagation latency as a schedule input: track MDS3 sequence numbers/`nextUpdate` (cu
+  + queued: Publication irreversibility hazard for the queue: any statement we publish is permanent — 
+[5/80] **Community-sourced negative list.** Since OpenAI publishes only exclusions (TrustKey T110/T120), mine the Daybreak/Yubico/Reddit/Discord threads for every model reported as *working* vs *labelled Passkey* to build the allowlist empirically before spending a single request.
+  -> research/findings/20261110-100647--community-sourced-negative-list-since-openai-publishes-only.md
+  sources cited: 15
+  + queued: Turn the one non-bundle positive into a controlled data point: ask the LatAm thread's resp
+  + queued: Mine the **r/passkey + pico-fido + Dangerous Things implant community** (VivoKey/Fidesmo u
+  + queued: Verify MDS-anchor-audit coverage of the **Dangerous Things / VivoKey / Walletmor implant e
+  + queued: Yubico 5.8-firmware AAGUIDs (new "hardware-backed signatures" line) — if the accepted list
+  + queued: Exploit the reported **UI-path split** (hardware-key modal vs passkey modal in AAS enrollm
+  + queued: Enforcement-laxness reports ("not even sure the physical key is being enforced yet", passk
+[6/80] OpenAI's partner bundle is `5C NFC` + `5C Nano` (Forrester) — the 5C Nano 5.7.4 AAGUID `4599062e` has never been tried and is the cheapest confirmation that "in the bundle" == "on the accept list".

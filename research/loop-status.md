@@ -74,3 +74,8 @@ AAGUID 4599062e: 200, resolved by name, false. Account now holds 17 credentials,
 flagged hardware, Continue disabled. Queue extended with list-change monitoring, the
 extension-presence question, newer-unreleased AAGUIDs, and a search for any reported
 *qualifying* software key.
+- 10:00 **Enterprise attestation as a separate gate.** YubiKeys on EA‑capable firmware produce per -> 20261110-095803--enterprise-attestation-as-a-separate-gate-yubikeys-on-ea-ca.md
+- 10:01 **RP trust-store vintage as an attack surface.** Cloudflare's case shows RPs pin/sync a sp -> 20261110-100055--rp-trust-store-vintage-as-an-attack-surface-cloudflare-s-ca.md
+- 10:03 **OEM/attestation‑provisioning programmes** where the *customer* holds the attestation key -> 20261110-100115--oem-attestation-provisioning-programmes-where-the-customer-.md
+- 10:06 **MDS portal economics for our own AAGUID** (FIDO membership tier, L1 vs L2, BLOB signing, -> 20261110-100341--mds-portal-economics-for-our-own-aaguid-fido-membership-tie.md
+- 10:09 **Community-sourced negative list.** Since OpenAI publishes only exclusions (TrustKey T110 -> 20261110-100647--community-sourced-negative-list-since-openai-publishes-only.md
