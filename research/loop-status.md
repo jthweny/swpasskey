@@ -33,3 +33,12 @@ agent proposes are appended to the queue automatically.
 - IDmelon free tier does not qualify (operator tested); premium tier is reported to.
 - 13 test credentials now on the account from these experiments.
 - 08:55 Any vendor that will issue attestation leaves to a customer (OEM/enterprise attestation pr -> 20261110-085244-any-vendor-that-will-issue-attestation-leaves-to-a-customer-.md
+- 08:56 Does OpenAI's client request `attestation: "direct"` on other flows (login, re-enrolment)  -> 20261110-085526-does-openai-s-client-request-attestation-direct-on-other-flo.md
+
+## Brief state at this point
+
+Rows 1-20 measured. Current model: admission = bundle-list OR valid chain; hardware =
+hardware-list AND valid chain. Row 20 (real IDmelon credential enrolled, MDS-labelled,
+hardware flag false) closed the "any real chain qualifies" hypothesis. Queue prioritised
+toward: models on both lists with obtainable material, aggregating which models users
+report as qualifying, and whether the hardware classification is re-evaluated over time.

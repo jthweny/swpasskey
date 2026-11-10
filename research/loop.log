@@ -71,3 +71,13 @@
   + queued: Verifier-implementation angle: identify whether OpenAI uses python-fido2/`fido2.mds3` sema
   + queued: Signal-2 dependency check, unpriced so far: does `tac1_enabled` also require the identity/
 [9/60] Does OpenAI's client request `attestation: "direct"` on other flows (login, re-enrolment) and does the classifier ever run on assertion data rather than registration?
+  -> research/findings/20261110-085526-does-openai-s-client-request-attestation-direct-on-other-flo.md
+  sources cited: 12
+  + queued: Client-declared `transports` / `authenticatorAttachment` / `credProps` are the only inputs
+  + queued: The AAS enrolment lives on `auth.openai.com`, a different origin (and possibly different R
+  + queued: Chrome's direct-attestation **consent prompt** is a free side channel for whether `attesta
+  + queued: Enterprise attestation path: advertise `ep` in `GetInfo`, return `epAtt:true` with enterpr
+  + queued: Isolate the classifier from the enrolment verifier by feeding it a *known-good* credential
+  + queued: Check whether OpenAI trusts AAGUID alone under L3's "AAGUID without attestation" allowance
+  + queued: Queue for later iterations: FIDO certified-but-software authenticators and MDS BLOB entry 
+[10/60] IDmelon's metadata anchors to **Vancosys Root CA** and IDmelon is now part of HID Global — a vendor that (a) ships a *software* credential, (b) holds its own attestation CA, and (c) sells managed FIDO to enterprises. Whether IDmelon/Vancosys issues attestation leaves or per-tenant AAGUIDs to customers is the highest-value commercial question in this whole map: https://www.token2.com/tools/fido2-mds/820d89edd65a409e85cbf73f0578f82a and https://idmelon.com/news/visit-idmelons-fido-certified-solution
