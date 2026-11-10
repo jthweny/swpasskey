@@ -46,6 +46,17 @@ if [ -z "$IDENTITY" ]; then
     echo "make_dmg: no code-signing identity in the keychain; the DMG will be unsigned" >&2
   fi
 fi
+# A name that is not in the keychain (a stale export, a docs placeholder pasted
+# in) fails here with the real list, before anything is assembled or signed.
+if [ -n "$IDENTITY" ] &&
+   ! security find-identity -v -p codesigning | grep -qF "\"$IDENTITY\""; then
+  echo "make_dmg: no such code-signing identity: $IDENTITY" >&2
+  echo "make_dmg: available identities:" >&2
+  security find-identity -v -p codesigning | sed -n 's/.*"\(.*\)".*/  \1/p' >&2
+  echo "make_dmg: unset SWPASSKEY_IDENTITY to use the first one automatically" >&2
+  exit 2
+fi
+
 MODE=${3:-${SWPASSKEY_MODE:-release}}
 NOTARIZE="${SWPASSKEY_NOTARY_PROFILE:-}"
 case "${4:-}" in

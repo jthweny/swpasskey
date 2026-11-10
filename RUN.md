@@ -39,11 +39,13 @@ You need three things that only your Apple account can provide:
 security find-identity -v -p codesigning
 ```
 
-`make_dmg.sh` uses the first one automatically — no placeholder to paste. To pick
-one explicitly, copy the exact quoted name from that output:
+`make_dmg.sh` uses the first one automatically — there is no placeholder to edit.
+If you set `SWPASSKEY_IDENTITY` yourself, copy the exact quoted name from that
+output; the script checks it against the keychain and fails loudly if it does not
+exist. A stale export from an older session is the usual cause, so:
 
 ```sh
-export SWPASSKEY_IDENTITY="Apple Development: Joshua Thweny (5G4RMX5PC7)"
+unset SWPASSKEY_IDENTITY SWPASSKEY_NOTARY_PROFILE
 ```
 
 `Apple Development:` signs for **this Mac** (install and run it locally).
@@ -248,5 +250,6 @@ $swpasskeyctl stats
 | `Killed: 9` right after launch | the signature carries an entitlement the profile does not grant; re-run `make_app.sh` with the profile in place |
 | `already_running` in the log | a second instance; the store `flock` refuses it |
 | Chrome offers no key | the device is not enumerating, or the site requires a certified key and rejects the self-signed attestation |
+| `make_dmg: no such code-signing identity: …` | `SWPASSKEY_IDENTITY` holds a stale or placeholder name; `unset` it |
 | `make_dmg: no build directory` | run `cmake --preset app` first, from the repo root |
 | `zsh: permission denied: build/app` | a wrapped line split the command; run the lines one at a time |
