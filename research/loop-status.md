@@ -65,3 +65,12 @@ owner signs in: start the bridge, press Add, read the credential flags.
 - 09:17 Check whether the verifier distinguishes `basic_full` from `basic_surrogate` / `AttCA`: ro -> 20261110-091507-check-whether-the-verifier-distinguishes-basic-full-from-bas.md
 - 09:19 Test the reverse-AAGUID split: `authData` AAGUID = an accepted model while the cert's AAGU -> 20261110-091753-test-the-reverse-aaguid-split-authdata-aaguid-an-accepted-mo.md
 - 09:22 Add a fresh-account control: enrol a *real* YubiKey (5C NFC, 5.8) on a new account and pol -> 20261110-091903-add-a-fresh-account-control-enrol-a-real-yubikey-5c-nfc-5-8-.md
+
+## Resumed after the four live probes (rows 21-24)
+
+P1 A-branch chain: 200, hardware false. P2 self-attestation: 200, false. P3 reverse
+AAGUID split: 400 (cert AAGUID extension is cross-checked). P4 enterprise-profile
+AAGUID 4599062e: 200, resolved by name, false. Account now holds 17 credentials, 0
+flagged hardware, Continue disabled. Queue extended with list-change monitoring, the
+extension-presence question, newer-unreleased AAGUIDs, and a search for any reported
+*qualifying* software key.
