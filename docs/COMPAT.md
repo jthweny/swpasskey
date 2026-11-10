@@ -187,6 +187,26 @@ Passkey / Apple Passwords / Google Password Manager
   isNonExportableHardwareKey: false
 ```
 
+**Five attempts at the flag, all false.** `is_non_exportable_hardware_key` was
+probed with every input we control:
+
+| attestation submitted | enrolment | `is_non_exportable_hardware_key` |
+| --- | --- | --- |
+| packed, self-signed leaf, AAGUID extension | 200 | false |
+| leaf issued by a self-made "Yubico Attestation Root CA" (x5c=2) | 200 | false |
+| same, but signature made by a different key than the leaf (forged statement) | **200** | false |
+| leaf + the **real** Yubico attestation root chain appended (x5c=4) | 200 | false |
+| leaf whose issuer DN is exactly `CN=Yubico FIDO Attestation B 1` | 200 | false |
+
+Two things fall out. Their enrolment **does not verify the `attStmt` signature** —
+a statement signed with the wrong key was accepted and issued a credential — so
+the gate cannot be satisfied by playing with signatures. And the flag is not
+derived from the issuer name, the presence of vendor roots, or the shape of the
+chain: it follows actual path validation against the MDS roots and/or the leaf
+key being one that the vendor registered in
+`attestationCertificateKeyIdentifiers`. Both require material only Yubico can
+sign, which is why the flag never moves.
+
 **A fabricated chain does not move it.** Built a two-certificate chain — leaf
 `CN=YubiKey 5C NFC` issued by a self-made `CN=Yubico Attestation Root CA`
 (`openssl verify` says OK) — and loaded it through `SWPASSKEY_ATTEST_CHAIN`. The
