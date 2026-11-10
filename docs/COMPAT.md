@@ -130,6 +130,13 @@ a profile from the menu bar. Chrome picks the device up live — no restart — 
 the daybreak "add a security key" sheet lists it as a USB key; the Approve panel
 *is* the touch, and the browser creates a PIN when it asks for user verification.
 
+If the app builds with the entitlement but the menu bar still says `No security
+key`, run `tools/entitlement-probe/run.sh`. It isolates the question — does this
+Mac let this team create a virtual HID device at all — with none of the daemon's
+code involved, and prints the kernel line (`failed MACF`) to attach to an
+entitlement request. Signature and profile can both verify while the kernel still
+refuses.
+
 `packaging/macos/README.md` covers the parts that need **your** team: the
 `com.apple.developer.hid.virtual.device` grant (per team, on request), the
 provisioning profile at `packaging/macos/embedded.provisionprofile`, Developer ID
