@@ -145,6 +145,8 @@ macOS (CTAP2 daemon + browser bridge):
 | 27 | **global-anchor-pool probe**: AAGUID `5df66f62` Securitag (refused on sight in row 10) but `x5c` ending in the genuine Yubico A-1 → Intermediate A-1 → Root 1 | **200**, resolved as "Securitag Assembly Group FIDO Authenticator NFC" | false |
 | 28 | **published-material replay**: for every end-entity MDS anchor (1102 certificates), is its own SPKI hash listed in `attestationCertificateKeyIdentifiers`, or does it carry an AAGUID extension? | **0 of 1102 for both** | n/a |
 | 29 | Yubico AAGUID + `fmt: "apple"`, local chain with the Apple nonce extension (`1.2.840.113635.100.8.2` = SHA-256(authData‖cdh)) | **400** | n/a |
+| 30 | Yubico AAGUID + **`fmt: "fido-u2f"`** — statement signed by the *credential* key over `0x00‖rpIdHash‖cdh‖credId‖0x04‖x‖y`; reference verifier returns BASIC | **400** | n/a |
+| 31 | Yubico AAGUID + **`fmt: "android-key"`** — KeyDescription extension with `attestationChallenge = cdh` | **400** | n/a |
 
 Two derived facts worth carrying:
 
@@ -245,6 +247,12 @@ Identifiers are a second attribution path used alongside anchors, never instead 
 them. Rows 27 and 28 remain valid as measurements — the pool is global, and no
 published certificate is a registered leaf — but the mechanism they were read as
 supporting has changed.
+
+Rows 30-31 finish the format matrix: all five attestation formats have now been
+submitted on an accepted AAGUID. `packed` and `none` are admitted, `tpm`, `apple`,
+`fido-u2f` and `android-key` are refused. Row 30 is the strongest of the refusals —
+its signature is genuinely valid under the certificate, so the refusal cannot be
+attributed to a malformed statement.
 
 ## Known dead ends — do not re-propose these
 

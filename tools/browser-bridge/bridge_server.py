@@ -377,7 +377,6 @@ class Handler(BaseHTTPRequestHandler):
         if exp_fmt in ("fido-u2f", "android-key"):
             leaf_key = ec.generate_private_key(ec.SECP256R1())
             if exp_fmt == "fido-u2f":
-                stmt, fmt_out = alt_formats.u2f_statement(auth_data_der, cdh, b"", leaf_key)
                 # u2f needs the leaf certificate in x5c, generated here
                 from cryptography import x509 as _x509
                 from cryptography.hazmat.primitives import serialization as _ser, hashes as _h
@@ -392,7 +391,9 @@ class Handler(BaseHTTPRequestHandler):
                         .add_extension(_x509.BasicConstraints(ca=False, path_length=None), critical=True)
                         .sign(leaf_key, _h.SHA256()))
                 leaf_der = leaf.public_bytes(_ser.Encoding.DER)
-                stmt, fmt_out = alt_formats.u2f_statement(auth_data_der, cdh, leaf_der, leaf_key)
+                cred_pub = attestation.auth_data.credential_data.public_key
+                stmt, fmt_out = alt_formats.u2f_statement(
+                    auth_data_der, cdh, leaf_der, leaf_key, xy=(cred_pub[-2], cred_pub[-3]))
             else:
                 stmt, fmt_out = alt_formats.android_key_statement(auth_data_der, cdh, leaf_key)
             att_obj = cbor.encode({"fmt": fmt_out, "attStmt": stmt, "authData": auth_data_der})

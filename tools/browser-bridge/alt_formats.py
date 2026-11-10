@@ -23,15 +23,20 @@ from cryptography.x509.oid import NameOID, ObjectIdentifier
 ANDROID_KEY_ATTESTATION_OID = ObjectIdentifier("1.3.6.1.4.1.11129.2.1.17")
 
 
-def u2f_statement(auth_data: bytes, client_data_hash: bytes, leaf_der: bytes, leaf_key):
-    """attStmt for fmt=fido-u2f: {sig, x5c}."""
+def u2f_statement(auth_data: bytes, client_data_hash: bytes, leaf_der: bytes, leaf_key, xy=None):
+    """attStmt for fmt=fido-u2f: {sig, x5c}.
+
+    The U2F message is 0x00 || rpIdHash || clientDataHash || credentialId ||
+    0x04||x||y. The coordinates are passed in because authData carries the COSE key
+    followed by an extension map, which a single decode cannot consume.
+    """
     rp_id_hash = auth_data[0:32]
     cred_id_len = int.from_bytes(auth_data[53:55], "big")
     cred_id = auth_data[55:55 + cred_id_len]
-    # COSE key follows, but the U2F message needs the raw point: 0x04||x||y
-    from fido2 import cbor
-    cose = cbor.decode(auth_data[55 + cred_id_len:])
-    pub = b"\x04" + cose[-2] + cose[-3]
+    if xy is None:
+        raise ValueError("u2f_statement needs the credential key coordinates")
+    x, y = xy
+    pub = b"\x04" + bytes(x) + bytes(y)
     msg = b"\x00" + rp_id_hash + client_data_hash + cred_id + pub
     sig = leaf_key.sign(msg, ec.ECDSA(hashes.SHA256()))
     stmt = {"sig": sig, "x5c": [leaf_der]}
