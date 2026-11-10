@@ -299,6 +299,17 @@ class Handler(BaseHTTPRequestHandler):
                     "allowCredentials": [],  # discoverable flow
                 }
             })
+        if path.startswith("/ext/"):
+            # Serve the shims for in-page testing of the extension's two halves.
+            allowed = {
+                "/ext/inject.js": HERE.parent / "chrome-extension" / "inject.js",
+                "/ext/relay.js": HERE.parent / "chrome-extension" / "relay.js",
+                "/ext/bridge.js": HERE.parent / "browser-bridge" / "bridge.js",
+            }
+            file = allowed.get(path)
+            if file is not None and file.is_file():
+                return self._send(200, file.read_bytes(), "text/javascript; charset=utf-8")
+            return self._json(404, {"error": "no such shim"})
         if path == "/log":
             if LOG.exists():
                 return self._send(200, LOG.read_bytes(), "application/x-ndjson")

@@ -187,7 +187,11 @@ be given a fresh registration to judge.
 
 ### When the kernel says no: the browser bridge
 
-`tools/browser-bridge/` runs the ceremony out of the daemon and into the page, so
+`tools/chrome-extension/` installs the shim on every page load (a `MAIN`-world
+script that keeps the credential shape, an isolated relay that is not bound by the
+page's CSP, and a fall-through to the browser's own authenticator when the bridge
+is down). `tools/browser-bridge/` runs the ceremony out of the daemon and into the
+page, so
 the relying party receives a real packed attestation with `x5c` without any USB
 device and without the entitlement. Verified in Chrome: registered `fmt=packed`,
 AAGUID `f4ce5fc0-…`, certificate `CN=YubiKey 5C NFC, O=Yubico AB`, `UP|UV`, BE/BS

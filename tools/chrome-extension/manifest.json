@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "swpasskey bridge",
+  "version": "1.0.0",
+  "description": "Route this page's WebAuthn calls to the local swpasskey daemon, so the site sees a security key without any USB device.",
+  "minimum_chrome_version": "111",
+  "host_permissions": ["http://localhost:3000/*"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["relay.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}

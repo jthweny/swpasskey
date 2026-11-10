@@ -286,7 +286,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(404, {"ok": False, "error": "not found"})
         except DaemonUnavailable as exc:
             print(f"[bridge] ERROR {self.path}: {exc}", file=sys.stderr)
-            self._json(503, {"ok": False, "error": str(exc)})
+            self._json(503, {"ok": False, "unavailable": True, "error": str(exc)})
         except CtapError as exc:
             # The daemon's status byte is the useful part; name it.
             message = ctap_message(exc)

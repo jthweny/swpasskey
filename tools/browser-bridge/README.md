@@ -1,5 +1,9 @@
 # Browser bridge
 
+> **Shortcut:** once the Chrome extension in `tools/chrome-extension/` is
+> installed, there is nothing to paste — this directory's `bridge.js` is for
+> one-off use, or for a browser where you cannot load an extension.
+
 Runs the WebAuthn ceremony for a page out of `swpasskeyd` instead of out of a USB
 HID device. The relying party receives a **real** CTAP2 attestation — the selected
 profile's AAGUID, a packed statement with an `x5c` certificate — produced by its
@@ -119,6 +123,9 @@ extension, which is the mechanism PRF is built on:
 
 ## Point it at the real site
 
+> With the extension installed, skip the paste entirely: load the page, press its
+> own security-key button. The steps below are the manual path.
+
 1. Open the site's sign-in page and get to the screen that offers **add a security
    key** (not "this device" / not "passkey in this browser").
 2. Open DevTools → Console. Paste the entire contents of
@@ -135,6 +142,13 @@ Watch the bridge terminal: one line per ceremony with the AAGUID, format and
 
 Run the bridge with `>>` rather than `>`: a restart then keeps the earlier
 ceremonies instead of truncating the only evidence of what just failed.
+
+## One diagnostic file
+
+`tools/browser-bridge/doctor.sh` writes `/tmp/swpk-doctor.txt`: the code SHA, the
+processes and who holds port 3000, whether the socket exists, `/health`, the
+current profile and attestation, the counters, and the last lines of both logs.
+Send that file instead of a transcript.
 
 ## When the page shows nothing and the bridge returns 500
 
