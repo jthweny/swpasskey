@@ -17,3 +17,5 @@ agent proposes are appended to the queue automatically.
 
 ## Log
 
+- 08:39 Is OpenAI's accepted-model list published, documented, or inferable from any community sou -> 20261110-083704-is-openai-s-accepted-model-list-published-documented-or-infe.md
+- 08:41 Does acceptance track vendor, FIDO certification level, MDS `keyProtection`, transport, or -> 20261110-083904-does-acceptance-track-vendor-fido-certification-level-mds-ke.md

@@ -64,6 +64,7 @@ macOS (CTAP2 daemon + browser bridge):
 | 16 | Yubico AAGUID + `fmt: "tpm"`, raw TPMT_SIGNATURE | **400** | n/a |
 | 17 | AAGUID `f8a011f3-…` **Security Key by Yubico** (certified, hardware, same vendor) | **400** | n/a |
 | 18 | AAGUID `2fc0579f-…` **YubiKey 5 NFC 5.2/5.4** (certified, hardware, same family) | **400** | n/a |
+| 19 | AAGUID `39a5647e-…` **IDmelon Authenticator** (phone app; MDS: FIDO_CERTIFIED_L1, hardware + secure_element, basic_full, Vancosys root) | **400** | n/a |
 
 Two derived facts worth carrying:
 
@@ -92,6 +93,18 @@ family-wide. A *Security Key by Yubico* is refused; a *YubiKey 5 NFC on firmware
 `a25342c0`) and Google Titan v2 (`42b4fb4a`) enrol. So the accepted list is a short
 allowlist of **specific current models**, not a property of the vendor, the
 certification level, or the key protection class.
+
+Row 19 reframes the gate again: a model reported by users as *qualifying* in
+reality (IDmelon, a phone app) is **refused when its AAGUID is claimed with our own
+certificate**. So the gate is not a hardcoded model list either — for models that
+are not in OpenAI's bundle programme, admission requires a **valid attestation
+chain to that model's MDS anchor**, which is why every non-bundle model returns 400
+for us while the bundle models (Yubico 5C NFC family, Titan v2) are admitted on
+sight and simply carry the hardware flag false.
+
+Practical consequence: something with a *real* vendor chain that is not a hardware
+purchase qualifies — IDmelon Authenticator (a phone app plus a desktop pairing tool)
+is reported to do exactly that.
 
 ## Known dead ends — do not re-propose these
 

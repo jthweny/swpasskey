@@ -1,0 +1,19 @@
+[1/60] Is OpenAI's accepted-model list published, documented, or inferable from any community source (support articles, forum threads, release notes) — and does it name models beyond Yubico and Titan?
+  -> research/findings/20261110-083704-is-openai-s-accepted-model-list-published-documented-or-infe.md
+  sources cited: 19
+  + queued: IDmelon's metadata anchors to **Vancosys Root CA** and IDmelon is now part of HID Global —
+  + queued: `attestationCertificateKeyIdentifiers` is a second attribution path in Metadata Statement 
+  + queued: Yubico **enterprise attestation** is gated by an RP allowlist on the key itself (the `1ac7
+  + queued: Thetis being "sometimes works" suggests the accept set is not a clean model list at all bu
+  + queued: Whether `tac1_enabled` responds to *key count* and *removal of other passkeys* is still un
+[2/60] Does acceptance track vendor, FIDO certification level, MDS `keyProtection`, transport, or AAGUID prefix? Enumerate accepted vs refused AAGUIDs and look for the discriminating field.
+  -> research/findings/20261110-083904-does-acceptance-track-vendor-fido-certification-level-mds-ke.md
+  sources cited: 20
+  + queued: Identify `f4ce5fc0` in the MDS blob (likely the firmware-5.8 AAGUID): if the newest AAGUID
+  + queued: Ask Token2 directly (they provision a chosen AAGUID onto partner Java Card hardware, are F
+  + queued: Pursue the "certification is the attestation key" fact from SoloKeys: build a Java Card / 
+  + queued: Cross-reference the Microsoft "Enforced attestation" column as a proxy list of models that
+  + queued: Check whether the verifier distinguishes `basic_full` from `basic_surrogate` / `AttCA`: ro
+  + queued: Test the reverse-AAGUID split: `authData` AAGUID = an accepted model while the cert's AAGU
+  + queued: Add a fresh-account control: enrol a *real* YubiKey (5C NFC, 5.8) on a new account and pol
+[3/60] Are there accepted models (Yubico/Titan families, other MDS entries in the same certificate programme) whose MDS trust anchor is an end-entity cert or absent — i.e. material a non-vendor can hold?
