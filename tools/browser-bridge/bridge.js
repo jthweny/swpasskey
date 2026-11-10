@@ -108,7 +108,10 @@
       response: {
         clientDataJSON: unb64u(json.clientDataJSON),
         attestationObject: unb64u(json.attestationObject),
-        getTransports: () => ["usb"],
+        // The daemon's getInfo claim, overridable per call for probes.
+        getTransports: () =>
+          (Array.isArray(window.__SWPK_TRANSPORTS) ? window.__SWPK_TRANSPORTS : null) ||
+          (Array.isArray(json.transports) && json.transports.length ? json.transports : ["usb"]),
         getAuthenticatorData: () =>
           json.authenticatorData ? unb64u(json.authenticatorData) : null,
         getPublicKey: () => (json.publicKey ? unb64u(json.publicKey) : null),

@@ -64,6 +64,7 @@ std::vector<CompatProfile> make_profiles() {
   {
     CompatProfile p;
     p.id = "yubico-security-key-c-nfc-5.8";
+    p.transports = {"usb", "nfc"};
     p.name = "Security Key C NFC (5.8)";
     p.aaguid = kYubicoSecurityKeyCNfc58;
     p.vid = 0x1050;
@@ -83,6 +84,7 @@ std::vector<CompatProfile> make_profiles() {
   {
     CompatProfile p;
     p.id = "yubikey-5c-nfc-5.8";
+    p.transports = {"usb", "nfc"};
     p.name = "YubiKey 5C NFC (5.8)";
     p.aaguid = kYubikey5cNfc58;
     p.vid = 0x1050;
@@ -102,6 +104,7 @@ std::vector<CompatProfile> make_profiles() {
   {
     CompatProfile p;
     p.id = "yubikey-5c-nfc-5.7";
+    p.transports = {"usb", "nfc"};
     p.name = "YubiKey 5C NFC (5.7)";
     p.aaguid = kYubikey5cNfc57;
     p.vid = 0x1050;
@@ -121,6 +124,7 @@ std::vector<CompatProfile> make_profiles() {
   {
     CompatProfile p;
     p.id = "yubikey-5c-nfc-5.7.4+";
+    p.transports = {"usb", "nfc"};
     p.name = "YubiKey 5C NFC (5.7.4+)";
     p.aaguid = kYubikey5cNfc574;
     p.vid = 0x1050;
@@ -159,6 +163,7 @@ std::vector<CompatProfile> make_profiles() {
   {
     CompatProfile p;
     p.id = "securitag-sag";
+    p.transports = {"usb", "nfc"};
     p.name = "Securitag SAG FIDO";
     p.aaguid = kSecuritagSag;
     p.vid = 0x1050;

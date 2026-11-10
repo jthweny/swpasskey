@@ -1,0 +1,2 @@
+import{a7 as i,a6 as c}from"./app-runtime-DI8szBs0.js";const r="daybreak_enrollment",p="https://auth.openai.com/api/accounts/advanced-account-security/daybreak";async function l(a,{method:t="GET",body:n,signal:o}={}){const s=await i(r),e=await fetch(`${p}${a}`,{method:t,credentials:"include",signal:o,headers:{Accept:"application/json","Content-Type":"application/json",...c(s)},body:n===void 0?void 0:JSON.stringify(n)});if(!e.ok)throw e;return e.json()}export{r as D,p as a,l as r};
+//# sourceMappingURL=daybreak-enrollment-api-Ga1JhLls.js.map

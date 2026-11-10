@@ -37,6 +37,10 @@ struct CompatProfile {
   std::uint16_t bcd_device{0x0001};
   std::string manufacturer;
   std::string product;
+  // What authenticatorGetInfo(0x04).transports reports (key 0x09). Chrome copies
+  // this into AuthenticatorAttestationResponse.getTransports(), which the site
+  // serialises into the registration POST, so it is a client-visible claim.
+  std::vector<std::string> transports{"usb"};
   SerialStrategy serial{SerialStrategy::sidecar};
 
   // Attestation certificate subject fields (self-attestation only).

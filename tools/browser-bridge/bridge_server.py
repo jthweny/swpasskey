@@ -441,6 +441,10 @@ class Handler(BaseHTTPRequestHandler):
             "flags": parsed["flags"],
             "x5c": len(attestation.att_stmt.get("x5c") or []),
             "clientExtensionResults": create_extension_results(attestation, want_prf),
+            # getInfo(0x04).transports, which the shim hands to getTransports().
+            # Chrome is not the CTAP client here, so the daemon's claim is only
+            # visible to the site through this field.
+            "transports": list(getattr(ctap.info, "transports", None) or ["usb"]),
             "rpId": rp["id"],
             "publicKeyAlgorithm": -7,
         }

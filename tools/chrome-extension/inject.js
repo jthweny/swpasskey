@@ -142,7 +142,12 @@
         clientDataJSON: unb64u(json.clientDataJSON),
         attestationObject: unb64u(json.attestationObject),
         // Client-declared, so make it switchable: window.__SWPK_TRANSPORTS = ["usb","nfc"]
-        getTransports: () => (Array.isArray(window.__SWPK_TRANSPORTS) ? window.__SWPK_TRANSPORTS : ["usb"]),
+        // getInfo(0x04).transports as the daemon reported it, unless a probe
+        // overrides it. Chrome is not the CTAP client in this path, so this is
+        // the only way the site ever sees the authenticator's transport claim.
+        getTransports: () =>
+          (Array.isArray(window.__SWPK_TRANSPORTS) ? window.__SWPK_TRANSPORTS : null) ||
+          (Array.isArray(json.transports) && json.transports.length ? json.transports : ["usb"]),
         getAuthenticatorData: () => (json.authenticatorData ? unb64u(json.authenticatorData) : null),
         getPublicKey: () => null,
         getPublicKeyAlgorithm: () => json.publicKeyAlgorithm || -7,

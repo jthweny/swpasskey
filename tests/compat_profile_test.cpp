@@ -36,7 +36,7 @@ TEST_CASE("compat: AAGUID text round-trip", "[compat]") {
 
 TEST_CASE("compat: registry contains the briefed profiles", "[compat]") {
   const auto& all = compat::all_profiles();
-  REQUIRE(all.size() == 5);
+  REQUIRE(all.size() == 8);
   const struct {
     const char* id;
     const char* aaguid;
@@ -45,8 +45,25 @@ TEST_CASE("compat: registry contains the briefed profiles", "[compat]") {
       {"yubico-security-key-c-nfc-5.8", "0f083f18-4105-43a8-ad69-24e812e38141", 0x1050},
       {"yubikey-5c-nfc-5.8", "f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5", 0x1050},
       {"yubikey-5c-nfc-5.7", "a25342c0-3cdc-4414-8e46-f4807fca511c", 0x1050},
+      {"yubikey-5c-nfc-5.7.4+", "d7781e5d-e353-46aa-afe2-3ca49f13332a", 0x1050},
+      {"yubikey-5-enterprise", "4599062e-6926-4fe7-9566-9e8fb1aedaa0", 0x1050},
+      {"securitag-sag", "5df66f62-5b47-43d3-aa1d-a6e31c8dbeb5", 0x1050},
       {"google-titan-v2", "42b4fb4a-2866-43b2-9bf7-6c6669c2e5d3", 0x18D1},
   };
+  // Dual-interface models advertise both transports: the site copies this into
+  // the registration POST, so a wrong claim is a visible difference from hardware.
+  for (const char* nfc : {"yubico-security-key-c-nfc-5.8", "yubikey-5c-nfc-5.8",
+                          "yubikey-5c-nfc-5.7", "yubikey-5c-nfc-5.7.4+",
+                          "securitag-sag"}) {
+    const auto* p = compat::find_profile(nfc);
+    REQUIRE(p != nullptr);
+    REQUIRE(p->transports == std::vector<std::string>{"usb", "nfc"});
+  }
+  for (const char* usb_only : {"stock-swpasskey", "google-titan-v2", "yubikey-5-enterprise"}) {
+    const auto* p = compat::find_profile(usb_only);
+    REQUIRE(p != nullptr);
+    REQUIRE(p->transports == std::vector<std::string>{"usb"});
+  }
   for (const auto& e : expected) {
     const auto* p = compat::find_profile(e.id);
     REQUIRE(p != nullptr);

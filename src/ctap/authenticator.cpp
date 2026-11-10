@@ -109,6 +109,12 @@ GetInfoSnapshot Authenticator::get_info() const {
   s.options.uv = true;
   s.options.pin_uv_auth_token = true;
   s.pin_protocols = {2};
+  // A dual-interface key advertises both; the value reaches the site verbatim.
+  if (const auto* p = profile().get()) {
+    if (!p->transports.empty()) {
+      s.transports = p->transports;
+    }
+  }
   s.remaining_discoverable = static_cast<std::uint32_t>(store_.remaining());
   return s;
 }

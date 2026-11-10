@@ -147,6 +147,8 @@ macOS (CTAP2 daemon + browser bridge):
 | 29 | Yubico AAGUID + `fmt: "apple"`, local chain with the Apple nonce extension (`1.2.840.113635.100.8.2` = SHA-256(authData‖cdh)) | **400** | n/a |
 | 30 | Yubico AAGUID + **`fmt: "fido-u2f"`** — statement signed by the *credential* key over `0x00‖rpIdHash‖cdh‖credId‖0x04‖x‖y`; reference verifier returns BASIC | **400** | n/a |
 | 31 | Yubico AAGUID + **`fmt: "android-key"`** — KeyDescription extension with `attestationChallenge = cdh` | **400** | n/a |
+| 32 | **`transports` claim** — what `getInfo(0x04).transports` reports, which reaches the site through `getTransports()` → the registration POST. Emulation said `["usb"]` for a dual-interface model; now profile-driven (`["usb","nfc"]` for the 5C NFC family) | **not yet submitted** — needs a signed-in tab | n/a |
+| 33 | **Anchor-door audit of the admitted set**, against MDS blob no. 299: every admitted AAGUID has roots (5C NFC 5.8 / 5.7.4+ / Security Key C NFC / enterprise = 6, 5C NFC 5.7 = 1, Titan v2 = 2); **0** entries worldwide are identifier-only; the 30 entries with neither roots nor identifiers are all `NOT_FIDO_CERTIFIED` platform authenticators | **closed** — no admitted model lacks an anchor | n/a |
 
 Two derived facts worth carrying:
 
@@ -253,6 +255,16 @@ submitted on an accepted AAGUID. `packed` and `none` are admitted, `tpm`, `apple
 `fido-u2f` and `android-key` are refused. Row 30 is the strongest of the refusals —
 its signature is genuinely valid under the certificate, so the refusal cannot be
 attributed to a malformed statement.
+
+Row 33 closes the "find an admitted model whose anchor set is empty or
+identifier-only" line of reasoning: there is none, so no self-signed leaf can become an
+anchor by picking a different AAGUID. The 30 anchorless entries in the blob are all
+uncertified platform authenticators, which are not what Daybreak admits.
+
+Row 32 records a correction to this project's own pipeline: because the extension relays
+`navigator.credentials.create()` over HTTP, Chrome is never the CTAP client, so
+`getTransports()` is whatever the shim says. The authenticator's real `getInfo` claim was
+invisible to the site until it was piped through the bridge response and both shims.
 
 ## Known dead ends — do not re-propose these
 
