@@ -93,8 +93,31 @@ echo "entitlement:  $(codesign -d --entitlements - "$APP" 2>&1 | grep -c hid.vir
 echo "grant:        $(grep -c hid.virtual.device "$WORK/profile.plist") (1 = profile grants it)"
 echo
 
-"$APP/Contents/MacOS/probe" | tee "$WORK/out.txt"
+GRANT=$(grep -c hid.virtual.device "$WORK/profile.plist" || true)
+if [ "$GRANT" = "0" ]; then
+  cat <<'EOS'
+VERDICT: this profile does not contain com.apple.developer.hid.virtual.device, so
+no signature made with it can create a virtual HID device.
+
+  A Developer ID profile is issued without that entitlement: Apple only puts it in
+  development profiles, and even there the kernel refuses it until the team is
+  granted the entitlement. That is the point of the entitlement request, not
+  something a different profile type can work around.
+EOS
+  exit 1
+fi
+
+"$APP/Contents/MacOS/probe" > "$WORK/out.txt" 2>&1
+STATUS=$?
+cat "$WORK/out.txt"
 PID=$(sed -n 's/^pid: //p' "$WORK/out.txt")
+
+if [ -z "$PID" ]; then
+  echo
+  echo "VERDICT: the probe did not reach main() (exit $STATUS). AMFI rejects a"
+  echo "         signature whose restricted entitlements the profile does not grant."
+  exit 1
+fi
 
 if grep -q "device: CREATED" "$WORK/out.txt"; then
   echo

@@ -130,6 +130,24 @@ a profile from the menu bar. Chrome picks the device up live — no restart — 
 the daybreak "add a security key" sheet lists it as a USB key; the Approve panel
 *is* the touch, and the browser creates a PIN when it asks for user verification.
 
+### The macOS kernel gate (measured 2026-11-10, macOS 26.3, Apple silicon)
+
+Recorded here because it decides the whole macOS path and is not documented
+anywhere in one place.
+
+| combination | result |
+| --- | --- |
+| development profile, App ID has **HID Virtual Device**, entitlement in the signature, matching bundle ID, Apple Development cert | `IOHIDUserDeviceCreate` returns null, `IOServiceOpen 0xe00002e2`, kernel: `IOUC IOHIDResourceDeviceUserClient failed MACF` |
+| the same, with `com.apple.security.get-task-allow` added | identical refusal |
+| **Developer ID** profile for the same App ID | the profile is issued **without** `com.apple.developer.hid.virtual.device` at all (`grant: 0`) |
+| a 60-line probe app with no swpasskey code | identical refusal |
+
+Conclusions that follow from the measurements: the capability is self-service
+only in the sense that it can be ticked, Apple emits it only into development
+profiles, and the kernel's MACF policy ignores it until the team is actually
+granted the entitlement. Signing setup, bundle ID, keychain groups and app code
+are all ruled out. The remaining action is the entitlement request.
+
 If the app builds with the entitlement but the menu bar still says `No security
 key`, run `tools/entitlement-probe/run.sh`. It isolates the question — does this
 Mac let this team create a virtual HID device at all — with none of the daemon's
