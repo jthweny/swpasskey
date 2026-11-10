@@ -27,6 +27,7 @@ import hashlib
 import json
 import os
 import socket
+import subprocess
 import sys
 import time
 import traceback
@@ -41,6 +42,17 @@ from fido2.hid import CtapHidDevice
 from fido2.hid.base import CtapHidConnection, HidDescriptor
 
 HERE = Path(__file__).resolve().parent
+
+
+def code_version() -> str:
+    """Short SHA of the checkout, so a stale process is identifiable in its banner."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(HERE), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=True)
+        return out.stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
 
 
 # CTAP status bytes worth naming: the raw number is useless in a console line.
@@ -433,7 +445,8 @@ def main() -> int:
 
     httpd = ThreadingHTTPServer((args.bind, args.port), Handler)
     httpd.daemon_threads = True
-    print(f"[bridge] listening on http://localhost:{args.port}/ "
+    print(f"[bridge] pid {os.getpid()} code {code_version()} "
+          f"listening on http://localhost:{args.port}/ "
           f"(bind {args.bind}, CTAP socket {args.hid_socket})", file=sys.stderr)
     print(f"[bridge] a page whose CSP allows http://localhost:{args.port} cannot be "
           f"blocked by it; other origins must be added to that CSP", file=sys.stderr)
