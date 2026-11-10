@@ -45,19 +45,34 @@ actually in the MDS, an OEM programme, or a documented key extraction).
 * TrustKey T110/T120 carry genuine vendor chains and are still labelled "Passkey":
   an active deny component overrides classification for named models.
 
-### Unknown — the only things worth searching for now
+### Unknown — after rows 27-29, this is all that is left
 
-* What exactly is on the hardware list, and whether it is per-model, per-vendor, or
-  tied to a partnership. No publication exists; only community positives: bundle
-  SKUs (C NFC, C Nano) and one self-report for the retail Security Key C NFC.
-* Whether the per-AAGUID anchor pool is actually global (would a Yubico A-1 anchor
-  satisfy a *different* Yubico AAGUID's entry?).
-* Whether batch-scoped leaves can be replayed (one captured leaf covering a
-  production run) — the single path that needs no private key.
-* Whether the classification is re-evaluated over time (users report late flips), and
-  whether `qualifying_count` can be read directly as an oracle.
-* Whether any newer Yubico AAGUID (5.8.x / 5.9 / 2025 Security Key) is already
-  admitted before its MDS entry is published.
+Closed since the list was first written: the anchor pool is **global** (row 27), no
+MDS-published certificate is a registered device key (row 28: 0 of 1102), and
+`fmt: "apple"` is refused like `tpm` (row 29). So a chain we assemble cannot reach
+the flag, and the material that could is unpublished.
+
+What genuinely remains:
+
+* **Staleness of *their* metadata.** Cloudflare had to sync MDS BLOB 281 to accept
+  5.7.x chains, so RPs run snapshots, not the live blob — https://community.cloudflare.com/t/fido2-security-key-enrollment-fails-with-attestation-certificate-chain-is-not-sign/959209
+  If OpenAI's snapshot predates or postdates an entry, an AAGUID's admission can
+  differ from what the current MDS implies. Is there an AAGUID whose status changed
+  across blobs that we can test?
+* **Whether the flag is really the identifier hash.** It is the only remaining input,
+  but it is inferred, not proven. Is there any published observation of a credential
+  with `is_non_exportable_hardware_key: true` whose attestation certificate could be
+  identified (screenshot, log, community post), which would name the tested value?
+* **Whether classification is re-evaluated over time.** Users report flips days
+  later. Does any *software* credential ever flip, or only genuine ones?
+* **The `qualifying_count` oracle.** `/backend-api/cyber_verification/refresh_status`
+  reports counts before the UI does. It needs the page's bearer token; is it readable
+  in-page, and does it ever disagree with the per-credential flags?
+* **Any reversal or addition to the accepted set.** They moved once inside a week.
+
+Anything that requires a vendor's attestation private key, a captured device leaf, or
+bypassing a live verification is out of scope: row 28 established the material is not
+publicly obtainable, and the remaining work is measurement, not forgery.
 
 ## Objective — and what counts as success
 
