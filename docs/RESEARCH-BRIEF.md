@@ -1,0 +1,130 @@
+# Research brief: getting a virtual authenticator accepted as a hardware key
+
+You are a research agent. Your job is to find **mechanisms we have not tried**, not
+to restate conclusions. Read the evidence below as *what has been measured*, never
+as proof that a thing is impossible.
+
+## Objective — and what counts as success
+
+**Success is a state of the live OpenAI account, not a plausible story.** Any claim
+of progress must be checked against these signals, in this order:
+
+| # | signal | how to check | success value |
+| --- | --- | --- | --- |
+| 1 | credential classified as non-exportable hardware | `GET /api/accounts/advanced-account-security/passkeys` | some entry has `is_non_exportable_hardware_key: true` |
+| 2 | Daybreak gate | `POST /backend-api/cyber_verification/status` | `{"tac1_enabled": true}` |
+| 3 | UI gate | the "Add a hardware security key" page | **Continue** becomes enabled |
+| 4 | end state | `chatgpt.com/cyber` → *Your eligibility* | Advanced Account Security complete, Daybreak keys step reachable ("You're all set" / "Set up your Daybreak keys") |
+
+**Not success, and already achieved nine times:** `is_security_key: true`, an MDS
+description echoed as the credential name, a key-shaped icon in the UI, or any
+attestation that merely *looks* like a vendor's. Those are table stakes, not the
+goal. Do not report them as progress.
+
+**Measure through time, not once.** Users report the classification updating late
+("some delayed/backend state update rather than the verification being permanently
+rejected"): re-query signals 1–2 at t+2 min, t+10 min, t+30 min before recording a
+failure. A single immediate `false` is not evidence.
+
+**Two separate questions, both must be answered:** (a) does the credential carry the
+hardware classification, and (b) does that classification unlock Daybreak for this
+account. A mechanism that satisfies one without the other is a partial finding and
+must be labelled as such.
+
+What is being classified (the account's own API, per credential):
+
+```
+authenticator_name               e.g. "YubiKey 5 Series with NFC (Consumer Profile)"
+is_security_key                  true for us
+is_non_exportable_hardware_key   false for us   <-- signal 1
+```
+
+## What has been measured (evidence, not verdicts)
+
+All enrolled live against the real account through an emulated authenticator on
+macOS (CTAP2 daemon + browser bridge):
+
+| # | attestation submitted | enrolment | hardware flag |
+|---|---|---|---|
+| 1 | packed, self-signed leaf, AAGUID extension, MDS-listed AAGUID | 200 | false |
+| 2 | leaf issued by self-made "Yubico Attestation Root CA" | 200 | false |
+| 3 | forged `attStmt.sig` (signature key ≠ leaf key) | **200** | false |
+| 4 | leaf + real Yubico root/intermediate certs appended (x5c=4) | 200 | false |
+| 5 | issuer DN set to the real `CN=Yubico FIDO Attestation B 1` | 200 | false |
+| 6 | AAGUID `d7781e5d-…` (5C NFC fw 5.7.4+, another project's allow-list model) | 200 | false |
+| 7 | AAGUID `42b4fb4a-…` (Google Titan v2) | 200 | false |
+| 8 | no extension data at all (`flags=0x45`, no ED bit) | 200 | false |
+| 9 | full Yubico-shaped leaf: AAGUID ext + chain + CA:FALSE/KU/SKI/AKI | 200 | false |
+
+Two derived facts worth carrying:
+
+* The enrolment endpoint **does not verify the `attStmt` signature** (row 3 was
+  accepted). So signatures can be shaped freely; they are not the discriminator.
+* The flag is **vendor-agnostic** (rows 6, 7) and independent of issuer naming,
+  chain shape, cert extensions and extension data.
+
+## Known dead ends — do not re-propose these
+
+* Self-signed / self-chained / real-roots-appended / issuer-name-spoofed chains.
+* Choosing a "better" AAGUID among MDS-listed ones.
+* Faking the attestation signature.
+* Appending genuine vendor CA certificates (we have Yubico's).
+* Anything requiring a vendor's attestation private key — unless you find a
+  *specific, sourced* exception (e.g. a vendor that issues attestation leaves to
+  customers, a dev kit whose attestation key is customer-generated, a public
+  attestation-certificate issuance service).
+
+## Open avenues worth attacking
+
+1. **MDS structure quirks.** Entries whose `attestationRootCertificates` are absent
+   or are themselves end-entity certs; entries with `attestationTypes` that don't
+   require a chain; AAGUIDs where verification cannot be anchored. Would a verifier
+   that fails closed still set the flag for some entry?
+2. **Alternative attestation formats.** `tpm`, `android-key`, `apple`, `fido-u2f`.
+   Does the check treat a TPM attestation differently (TPM EK certs chain to
+   silicon-vendor CAs)? Can a TPM attestation be produced without vendor keys, and
+   does it satisfy the flag?
+3. **Vendors that issue attestation to customers.** Enterprise/OEM programmes
+   (Feitian, G+D, HID, Thales, Infineon, NXP, Token2, Nitrokey, SoloKeys). Which of
+   them will sign a customer's leaf, and does that put the customer's root in MDS?
+4. **What `tac1_enabled` actually requires.** Community reports, support answers,
+   Reddit/Discord/GitHub issues: which keys flip it, does identity verification
+   matter, does a *second* key matter, is there a manual/org route.
+5. **MDS entry process.** Practical requirements and cost to become the vendor of
+   our own AAGUID (FIDO Alliance membership tiers, L1 vs L2, BLOB signing, whether
+   a software authenticator can be certified and what it may claim about key
+   protection).
+6. **Known leaked/misissued attestation material.** Public reports of vendor
+   attestation key compromise, test attestation certificates shipped in products,
+   or publicly downloadable device leaves (any vendor).
+7. **Verifier implementation weaknesses.** Any documented case of a relying party
+   accepting non-genuine attestation because of an X.509 edge case — partial chain,
+   path-length, name constraints, cross-signing, EKU handling.
+
+## Rules
+
+* **Failure rows above are evidence, not verdicts.** Do not write "this is
+  impossible". Ask instead: which assumption produced that result, and what would
+  have to differ for the result to change?
+* Every factual claim needs a URL. No speculation presented as fact.
+* Prefer primary sources: FIDO specs/MDS, vendor docs, browser source, papers with
+  PDFs, maintainer statements.
+* Do not re-run experiments we already ran; propose *new* ones.
+* Each iteration must end with **testable experiments** — something executable in
+  under an hour with a local CTAP2 authenticator that already exists here, each
+  with an explicit expected result and what it would prove.
+
+## Output format (exact)
+
+```
+## FOUND
+- <fact> — <url>
+
+## EXPERIMENTS
+1. <what to do, concretely> | expect: <result> | proves: <what>
+
+## NEW ANGLES
+- <angle for the queue>
+```
+
+No prose outside those three sections.
