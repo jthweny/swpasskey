@@ -228,3 +228,21 @@
   + queued: Exploit the reported **UI-path split** (hardware-key modal vs passkey modal in AAS enrollm
   + queued: Enforcement-laxness reports ("not even sure the physical key is being enforced yet", passk
 [6/80] OpenAI's partner bundle is `5C NFC` + `5C Nano` (Forrester) — the 5C Nano 5.7.4 AAGUID `4599062e` has never been tried and is the cheapest confirmation that "in the bundle" == "on the accept list".
+  -> research/findings/20261110-100925-openai-s-partner-bundle-is-5c-nfc-5c-nano-forrester-the-5c-n.md
+  sources cited: 11
+  + queued: Chrome platform-managed enterprise attestation (`#web-authentication-permit-enterprise-att
+  + queued: Security Key NFC – Enterprise Edition (`47ab2fb4`, `0bb43545`, `9ff4cc65`) is the only non
+  + queued: The `authenticator_name` resolution path is an oracle: compare names echoed for accepted-b
+  + queued: Treat the accepted set as a periodically refreshed snapshot (TrustKey flipped compatible→i
+  + queued: Yubico's Works-With-YubiKey catalog "OpenAI" tag per product is an external, vendor-publis
+  + queued: `attestationFormatsPreference` (CTAP 2.3 / fw 5.8) may make the RP negotiate non-packed fo
+[7/80] "Yubico FIDO EE" leaf naming implies per-batch EE certs are issued from the CA; check whether Yubico's developer programme ever ships a customer-provisioned attestation path (YubiKey as a Service, custom-programmed enterprise orders) — this is the operator's "vendor issues leaves to customers" exception, and EA keys are literally custom-programmed per customer.
+  -> research/findings/20261110-101347--yubico-fido-ee-leaf-naming-implies-per-batch-ee-certs-are-i.md
+[8/80] OpenSK (Google's open FIDO2 firmware) and Nitrokey 3 / Solo v2: customer-flashable firmwares where the attestation cert is provisioned at build/provisioning time — check whether any of them can present an MDS-listed AAGUID with a self-provisioned leaf, which would be the first *legitimate* self-held leaf.
+  -> research/findings/20261110-101442-opensk-google-s-open-fido2-firmware-and-nitrokey-3-solo-v2-c.md
+  sources cited: 4
+[9/80] `keyProtection`/`attestationTypes` differential: enumerate every MDS entry with `attestationTypes:["basic_surrogate"]` or empty roots, cross-reference against OpenAI's observed 200/400 behaviour, and see whether "attested but unverifiable" is a class OpenAI treats as hardware.
+  -> research/findings/20261110-101525--keyprotection-attestationtypes-differential-enumerate-every.md
+[10/80] The Daybreak doc is the only published artefact that names models. Monitor it as a versioned oracle — the T110/T120 carve-out appeared *after* launch and after purchases, which means the list is mutable and support-visible; a support ticket asking "which models qualify" is a cheaper oracle than enrolment probing.
+  -> research/findings/20261110-101542-the-daybreak-doc-is-the-only-published-artefact-that-names-m.md
+[11/80] **Batch-leaf replay as the primary path.** Because leaves are batch-scoped (≥100k devices share one cert) and `attStmt.sig` is unchecked, the missing input is one *public certificate*, not a private key. Source candidates: GitHub issues/StackOverflow pastes of `attestationObject`, passkey-debugger exports, `python-fido2`/`py_webauthn` issue threads, and any YubiKey owner. Collect 3–5 independent `f4ce5fc0` leaves and treat them as a corpus.

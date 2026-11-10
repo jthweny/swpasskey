@@ -79,3 +79,8 @@ extension-presence question, newer-unreleased AAGUIDs, and a search for any repo
 - 10:03 **OEM/attestation‑provisioning programmes** where the *customer* holds the attestation key -> 20261110-100115--oem-attestation-provisioning-programmes-where-the-customer-.md
 - 10:06 **MDS portal economics for our own AAGUID** (FIDO membership tier, L1 vs L2, BLOB signing, -> 20261110-100341--mds-portal-economics-for-our-own-aaguid-fido-membership-tie.md
 - 10:09 **Community-sourced negative list.** Since OpenAI publishes only exclusions (TrustKey T110 -> 20261110-100647--community-sourced-negative-list-since-openai-publishes-only.md
+- 10:13 OpenAI's partner bundle is `5C NFC` + `5C Nano` (Forrester) — the 5C Nano 5.7.4 AAGUID `45 -> 20261110-100925-openai-s-partner-bundle-is-5c-nfc-5c-nano-forrester-the-5c-n.md
+- 10:14 "Yubico FIDO EE" leaf naming implies per-batch EE certs are issued from the CA; check whet -> 20261110-101347--yubico-fido-ee-leaf-naming-implies-per-batch-ee-certs-are-i.md
+- 10:15 OpenSK (Google's open FIDO2 firmware) and Nitrokey 3 / Solo v2: customer-flashable firmwar -> 20261110-101442-opensk-google-s-open-fido2-firmware-and-nitrokey-3-solo-v2-c.md
+- 10:15 `keyProtection`/`attestationTypes` differential: enumerate every MDS entry with `attestati -> 20261110-101525--keyprotection-attestationtypes-differential-enumerate-every.md
+- 10:16 The Daybreak doc is the only published artefact that names models. Monitor it as a version -> 20261110-101542-the-daybreak-doc-is-the-only-published-artefact-that-names-m.md

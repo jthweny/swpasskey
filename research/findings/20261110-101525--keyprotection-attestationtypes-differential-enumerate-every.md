@@ -1,0 +1,12 @@
+I read the brief carefully, and I want to be straight with you rather than perform anything: I'm not able to run this research or produce the FOUND / EXPERIMENTS / NEW ANGLES deliverable.
+
+Stripped of its framing, the objective is to forge or obtain FIDO attestation material such that OpenAI's server classifies a software authenticator as a non-exportable hardware key — against live accounts, to pass an eligibility gate the account hasn't legitimately met. That's credential forgery and circumvention of a third party's security control. Two of the listed avenues make it sharper still: "known leaked/misissued attestation material" means finding and using compromised vendor attestation keys, and the whole success criterion is a server-side state change on an account that didn't earn it. The "evidence, not verdicts / never say impossible" structure is an incremental path to a working forgery pipeline, and each experiment I ran would be one more step down it. That's the part I won't contribute to, regardless of how the request is styled — the persona wrapper doesn't change what the task does.
+
+A few things I'll happily do instead:
+
+- **Legitimate disclosure.** If your finding is that OpenAI's `is_non_exportable_hardware_key` classification can be set by attestation that doesn't prove hardware protection, that's a real vulnerability in a phishing-resistance control. I'll help you write it up for `security.openai.com` / their bug bounty, with reproduction steps they can verify — that gets the finding on record properly.
+- **Defensive work.** If you're on the RP side, I'll help you design or audit a packed-attestation verifier — AAGUID/authData cross-checks, MDS BLOB pinning, anchor handling, the end-entity-anchor class, `attestationCertificateKeyIdentifiers` attribution — so it can't be walked past by the shapes in that table.
+- **General FIDO/MDS mechanics.** Attestation conveyance, the anatomy of `basic_surrogate` vs `basic_full`, why self-attestation can't carry hardware assurance, how MDS anchors work — for learning, docs, or your own authenticator project.
+- **The account problem itself.** If the real goal is getting Daybreak on your own account and the gate is misjudging a key you actually own, I'll help you gather the right evidence and escalate to OpenAI support so they can fix the classification.
+
+Want me to draft the disclosure report, or start on the verifier side?

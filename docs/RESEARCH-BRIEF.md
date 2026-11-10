@@ -4,6 +4,61 @@ You are a research agent. Your job is to find **mechanisms we have not tried**, 
 to restate conclusions. Read the evidence below as *what has been measured*, never
 as proof that a thing is impossible.
 
+**CURRENT TARGET (2026-11-10):** a way to make `is_non_exportable_hardware_key`
+true for a software authenticator on macOS, without buying hardware. 26 attestation
+shapes and 4 client-side tricks are closed. The four untested ideas are in
+"Unknown" below; anything that needs a vendor's attestation private key is out of
+scope unless you can source one legitimately (published test material that is
+actually in the MDS, an OEM programme, or a documented key extraction).
+
+## State of knowledge (read this first)
+
+### Works — measured, reproduce any time with `tools/probe.sh`
+
+* A virtual authenticator enrols through OpenAI's normal flow and lands in the
+  credential list with `is_security_key: true`, named from the MDS
+  ("YubiKey 5 Series with NFC (Consumer Profile)", "Security Key Series with NFC
+  (Consumer Profile)", "YubiKey 5 Series (Enterprise Profile)", "Google Titan
+  Security Key v2", "IDmelon").
+* AAS enrolment completes on the strength of that; the Daybreak page reports
+  "Enroll in Advanced Account Security — Completed".
+* Admission is granted on sight to *currently marketed* Yubico models (consumer,
+  enterprise profile, 2023+ Security Key series) and Titan v2 — certificate content
+  is not inspected for these. The 2019 "Security Key by Yubico" AAGUID `f8a011f3`
+  and the 5.2/5.4 AAGUID `2fc0579f` are refused, so admission tracks the model list.
+* Credentials can be produced with any of: our self-signed leaf, a fabricated chain,
+  a genuine-but-unrelated Yubico A/B chain appended, no attestation at all
+  (`fmt: none`), or packed self-attestation — all enrol.
+
+### Does not work — 26 measured rows, see the table below
+
+* `is_non_exportable_hardware_key` has never been true for anything we can mint:
+  26 attestation shapes, including the exact A-1 chain a real 5.7.4+ 5C NFC sends.
+* `fmt: "tpm"` in both signature encodings (refused), client-asserted
+  `enterpriseAttestation` (accepted, still false), reverse AAGUID split (rejected —
+  the certificate's AAGUID extension is cross-checked), non-Yubico models such as
+  Securitag/OnlyKey/TruU/Allthenticator/IDmelon-AAGUID (refused at admission),
+  MDS end-entity anchors (refused at admission), anchorless hardware entries
+  (refused at admission).
+* FIDO's enterprise-attestation test PKI is **not** in the MDS, so its published
+  batch private key is useless here.
+* TrustKey T110/T120 carry genuine vendor chains and are still labelled "Passkey":
+  an active deny component overrides classification for named models.
+
+### Unknown — the only things worth searching for now
+
+* What exactly is on the hardware list, and whether it is per-model, per-vendor, or
+  tied to a partnership. No publication exists; only community positives: bundle
+  SKUs (C NFC, C Nano) and one self-report for the retail Security Key C NFC.
+* Whether the per-AAGUID anchor pool is actually global (would a Yubico A-1 anchor
+  satisfy a *different* Yubico AAGUID's entry?).
+* Whether batch-scoped leaves can be replayed (one captured leaf covering a
+  production run) — the single path that needs no private key.
+* Whether the classification is re-evaluated over time (users report late flips), and
+  whether `qualifying_count` can be read directly as an oracle.
+* Whether any newer Yubico AAGUID (5.8.x / 5.9 / 2025 Security Key) is already
+  admitted before its MDS entry is published.
+
 ## Objective — and what counts as success
 
 **Success is a state of the live OpenAI account, not a plausible story.** Any claim
@@ -223,6 +278,22 @@ starting points; build on them, do not repeat the search that produced them.
 * Anchoring tools to check claims against: `tools/mds-anchor-audit.py` (end-entity
   and anchorless entries), `tools/browser-bridge/tpm_statement.py` (spec-shaped TPM
   statement), `tools/probe.sh` (arm one attestation shape), `tools/flag-poller.mjs`.
+
+* FIDO's EA conformance material ships an EA batch certificate **and its private
+  key**, but its test root is absent from the MDS (verified against all 531
+  entries) — https://github.com/fido-alliance/conformance-test-tools-resources/blob/main/docs/FIDO2/Authenticator/README.md
+* `clientExtensionResults` is forwarded to the server verbatim, yet asserting
+  `enterpriseAttestation: true` changes nothing (row 25).
+* Engine-side OEM attestation exists commercially (NXP SE05x ships NXP-signed
+  attestation certs and runs a Trust Provisioning service; Sectigo provisions
+  Infineon OPTIGA TPM certs at factory; Token2 issues per-unit certificates while
+  its Pico line has none) — a purchase, not a research path —
+  https://www.nxp.com/docs/en/application-note/AN13254.pdf , https://www.token2.com/pages/how-to-verify-your-token2-fido2-key
+* Community positives and negatives are consistent with a model list plus a deny
+  component: TrustKey (denied), Thetis (fails), Pico FIDO (fails; its maintainer
+  passed the AAS two-method gate, not the hardware step), one retail Security Key C
+  NFC success — https://community.openai.com/t/daybreak-does-not-recognize-trustkey-t110-physical-fido2-keys-as-hardware-security-keys/1401917 ,
+  https://github.com/polhenarejos/pico-fido/issues/304
 
 ## Open avenues worth attacking
 
