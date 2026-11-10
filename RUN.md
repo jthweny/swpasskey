@@ -66,9 +66,13 @@ real gate; nothing here can create it.
 
 3. **The profile on disk:**
 
+No placeholder: take the newest profile in Downloads. Check what it is first with
+`tools/entitlement-probe/run.sh`, which names the profile and its UUID.
+
 ```sh
-cp ~/Downloads/Your_Profile.provisionprofile \
-   ~/VirtualYubi/swpasskey/packaging/macos/embedded.provisionprofile
+P=$(ls -t ~/Downloads/*.provisionprofile | head -1)
+echo "$P"
+cp "$P" ~/VirtualYubi/swpasskey/packaging/macos/embedded.provisionprofile
 ```
 
 Verify it actually grants the entitlement before building. `1` means yes, `0`

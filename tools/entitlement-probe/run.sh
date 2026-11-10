@@ -22,17 +22,26 @@ APP="$WORK/Probe.app"
   exit 2
 }
 
-if [ -z "$IDENTITY" ]; then
-  IDENTITY=$(security find-identity -v -p codesigning | sed -n 's/.*"\(.*\)".*/\1/p' | head -1)
-fi
-[ -n "$IDENTITY" ] || { echo "run.sh: no code-signing identity in the keychain" >&2; exit 2; }
-
 rm -rf "$WORK"
 mkdir -p "$APP/Contents/MacOS"
+security cms -D -i "$PROFILE" > "$WORK/profile.plist"
+
+# Sign with the certificate the profile authorises, not just the first one in
+# the keychain: a Developer ID profile rejects an Apple Development signature.
+PROFILE_CN=$(python3 "$HERE/cert-cn.py" "$WORK/profile.plist" | head -1)
+if [ -z "$IDENTITY" ]; then
+  IDENTITY=$(security find-identity -v -p codesigning |
+    sed -n 's/.*"\(.*\)".*/\1/p' | grep -F "$PROFILE_CN" | head -1)
+fi
+if [ -z "$IDENTITY" ]; then
+  echo "run.sh: the profile is issued for \"$PROFILE_CN\"," >&2
+  echo "run.sh: which is not a code-signing identity in this keychain. Available:" >&2
+  security find-identity -v -p codesigning | sed -n 's/.*"\(.*\)".*/  \1/p' >&2
+  exit 2
+fi
 
 # The bundle ID must equal the profile's application-identifier minus the team
 # prefix, or AMFI will not bind the entitlements to this app.
-security cms -D -i "$PROFILE" > "$WORK/profile.plist"
 FULL_ID=$(plutil -extract 'Entitlements.com\.apple\.application-identifier' raw \
   -o - "$WORK/profile.plist")
 TEAM=$(plutil -extract 'Entitlements.com\.apple\.developer\.team-identifier' raw \
@@ -65,11 +74,23 @@ cp "$PROFILE" "$APP/Contents/embedded.provisionprofile"
 codesign --force --options runtime --timestamp \
   --entitlements "$WORK/probe.entitlements" --sign "$IDENTITY" "$APP" >/dev/null 2>&1
 
+if grep -q ProvisionedDevices "$WORK/profile.plist"; then
+  PROFILE_KIND="development (has a registered-device list)"
+else
+  PROFILE_KIND="distribution-style (no device list)"
+fi
+
+echo "profile path: $PROFILE"
+echo "profile name: $(plutil -extract Name raw -o - "$WORK/profile.plist")"
+echo "profile uuid: $(plutil -extract UUID raw -o - "$WORK/profile.plist")"
+echo "created:      $(plutil -extract CreationDate raw -o - "$WORK/profile.plist")"
+echo "expires:      $(plutil -extract ExpirationDate raw -o - "$WORK/profile.plist")"
+echo "kind:         $PROFILE_KIND"
 echo "bundle id:    $BUNDLE_ID"
 echo "team:         $TEAM"
 echo "identity:     $IDENTITY"
 echo "entitlement:  $(codesign -d --entitlements - "$APP" 2>&1 | grep -c hid.virtual.device) (1 = present in the signature)"
-echo "profile:      $(grep -c hid.virtual.device "$WORK/profile.plist") (1 = profile grants it)"
+echo "grant:        $(grep -c hid.virtual.device "$WORK/profile.plist") (1 = profile grants it)"
 echo
 
 "$APP/Contents/MacOS/probe" | tee "$WORK/out.txt"

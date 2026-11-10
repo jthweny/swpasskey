@@ -12,12 +12,17 @@ swpasskey code is involved, so the result cannot be blamed on the daemon.
 tools/entitlement-probe/run.sh
 ```
 
+It prints which profile it used, by name and UUID, so running the same profile
+twice by accident is visible. To test another profile, point it at the file
+directly — there is no placeholder to edit, use the newest download:
+
 ```sh
-# when the profile or identity is somewhere else
-SWPASSKEY_PROFILE=~/Downloads/prof.provisionprofile \
-SWPASSKEY_IDENTITY="Apple Development: Someone (TEAMID)" \
-  tools/entitlement-probe/run.sh
+P=$(ls -t ~/Downloads/*.provisionprofile | head -1)
+SWPASSKEY_PROFILE="$P" tools/entitlement-probe/run.sh
 ```
+
+The signing identity is chosen from the profile's own `DeveloperCertificates`, so
+a Developer ID profile is never signed with an Apple Development certificate.
 
 ## What the two answers look like
 
