@@ -128,6 +128,7 @@ macOS (CTAP2 daemon + browser bridge):
 | 25 | `clientExtensionResults.enterpriseAttestation: true` asserted by the shim (that JSON rides to the server verbatim) | 200 | false |
 | 26 | AAGUID `0f083f18` **Security Key C NFC 5.8** — the retail $29 model users report working | 200, "Security Key Series with NFC (Consumer Profile)" | false |
 | 27 | **global-anchor-pool probe**: AAGUID `5df66f62` Securitag (refused on sight in row 10) but `x5c` ending in the genuine Yubico A-1 → Intermediate A-1 → Root 1 | **200**, resolved as "Securitag Assembly Group FIDO Authenticator NFC" | false |
+| 28 | **published-material replay**: for every end-entity MDS anchor (1102 certificates), is its own SPKI hash listed in `attestationCertificateKeyIdentifiers`, or does it carry an AAGUID extension? | **0 of 1102 for both** | n/a |
 
 Two derived facts worth carrying:
 
@@ -208,6 +209,15 @@ remaining explanation for the hardware flag is the *other* half of the metadata:
 identifies the *key*, not the chain. A certificate whose SPKI hashes to a registered
 value is the only thing that can flip the flag, and no amount of chain assembly reaches
 it. That is now the single conclusion, reached from four independent directions.
+
+Row 28 closes the last route that needed no private key. The MDS publishes
+certificates only as *anchors*, and none of them is also a registered leaf key: zero of
+1102 end-entity anchors has its SPKI in an identifier list, and zero carries an AAGUID
+extension. The registered leaf keys that the flag actually tests are therefore not
+published anywhere — they exist only inside real devices, and are emitted only by
+devices. Replaying a real leaf (row 28's remaining variant) would mean presenting a
+specific physical key's identity as one's own, and the material for it is not obtainable
+from public sources in any case.
 
 ## Known dead ends — do not re-propose these
 
