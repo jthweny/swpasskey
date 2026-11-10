@@ -111,6 +111,8 @@ separately from hypothesis 1 (AAGUID → MDS).
 ### Build a DMG
 
 ```sh
+cd swpasskey                       # the repo root: CMakePresets.json lives here
+brew install cmake ninja           # presets use Ninja
 cmake --preset app
 cmake --build build/app -j
 

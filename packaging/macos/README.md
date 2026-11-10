@@ -46,13 +46,27 @@ device until the grant is in place.
 
 ## 1. Build
 
-Use the `app` preset: it links OpenSSL statically, because the hardened runtime
-refuses to load a Homebrew `libcrypto` signed by another team.
+Run these **from the repository root** (the directory holding
+`CMakePresets.json`), not its parent:
 
 ```sh
+cd /path/to/swpasskey
+
+brew install cmake ninja        # the presets use the Ninja generator
 cmake --preset app
 cmake --build build/app -j
 ```
+
+Use the `app` preset: it links OpenSSL statically, because the hardened runtime
+refuses to load a Homebrew `libcrypto` signed by another team. The resulting
+binary depends only on system frameworks — check with
+`otool -L build/app/swpasskeyd.app/Contents/MacOS/swpasskeyd`.
+
+Homebrew's `libcrypto.a` is built for the current macOS, so linking against a
+`CMAKE_OSX_DEPLOYMENT_TARGET` of 14.0 emits `was built for newer 'macOS'
+version` warnings. Harmless for running on this Mac; to distribute to older
+systems, configure with `-DCMAKE_OSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)`
+or build OpenSSL from source for the oldest target you support.
 
 ## 2. Sign, bundle, wrap in a DMG
 
