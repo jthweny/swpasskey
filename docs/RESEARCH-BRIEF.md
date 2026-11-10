@@ -145,9 +145,10 @@ macOS (CTAP2 daemon + browser bridge):
 | 27 | **global-anchor-pool probe**: AAGUID `5df66f62` Securitag (refused on sight in row 10) but `x5c` ending in the genuine Yubico A-1 → Intermediate A-1 → Root 1 | **200**, resolved as "Securitag Assembly Group FIDO Authenticator NFC" | false |
 | 28 | **published-material replay**: for every end-entity MDS anchor (1102 certificates), is its own SPKI hash listed in `attestationCertificateKeyIdentifiers`, or does it carry an AAGUID extension? | **0 of 1102 for both** | n/a |
 | 29 | Yubico AAGUID + `fmt: "apple"`, local chain with the Apple nonce extension (`1.2.840.113635.100.8.2` = SHA-256(authData‖cdh)) | **400** | n/a |
-| 30 | Yubico AAGUID + **`fmt: "fido-u2f"`** — statement signed by the *credential* key over `0x00‖rpIdHash‖cdh‖credId‖0x04‖x‖y`; reference verifier returns BASIC | **400** | n/a |
+| 30 | Yubico AAGUID + **`fmt: "fido-u2f"`** — statement over `0x00‖rpIdHash‖cdh‖credId‖0x04‖x‖y`, signed by the leaf certificate's key; python-fido2 returns BASIC because it verifies against `cert.public_key()` | **400** | n/a |
 | 31 | Yubico AAGUID + **`fmt: "android-key"`** — KeyDescription extension with `attestationChallenge = cdh` | **400** | n/a |
 | 32 | **`transports` claim** — what `getInfo(0x04).transports` reports, which reaches the site through `getTransports()` → the registration POST. Emulation said `["usb"]` for a dual-interface model; now profile-driven (`["usb","nfc"]` for the 5C NFC family) | **not yet submitted** — needs a signed-in tab | n/a |
+| 34 | **Attestation-statement provenance** — every format we can mint is signed by a key we generate; none is signed by the *credential* key, which the daemon holds and never exports. `fido-u2f` passes python-fido2 only because that verifier checks `cert.public_key()`; `android-key` is self-consistent (challenge bound, sig verifies) but not spec-conformant. A spec-strict verifier would refuse both regardless of chain | **closed** — signature provenance cannot be forged without the daemon exporting credential keys | n/a |
 | 33 | **Anchor-door audit of the admitted set**, against MDS blob no. 299: every admitted AAGUID has roots (5C NFC 5.8 / 5.7.4+ / Security Key C NFC / enterprise = 6, 5C NFC 5.7 = 1, Titan v2 = 2); **0** entries worldwide are identifier-only; the 30 entries with neither roots nor identifiers are all `NOT_FIDO_CERTIFIED` platform authenticators | **closed** — no admitted model lacks an anchor | n/a |
 
 Two derived facts worth carrying:
@@ -265,6 +266,12 @@ Row 32 records a correction to this project's own pipeline: because the extensio
 `navigator.credentials.create()` over HTTP, Chrome is never the CTAP client, so
 `getTransports()` is whatever the shim says. The authenticator's real `getInfo` claim was
 invisible to the site until it was piped through the bridge response and both shims.
+
+Row 34 corrects an overclaim made earlier in this project: `fido-u2f` was described as
+"the only format whose signature is genuinely valid". It is valid under python-fido2,
+which verifies against the certificate's key; the WebAuthn text puts the signature on the
+credential key, which we do not hold. So the honest statement is that the statement is
+self-consistent, and both refused formats would also be refused for provenance alone.
 
 ## Known dead ends — do not re-propose these
 
