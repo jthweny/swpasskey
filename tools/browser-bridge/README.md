@@ -36,7 +36,18 @@ handle returned.
 
 ## Run it
 
-Three terminals, or one with `&`.
+One command does all of it — daemon, profile, bridge, and a health check that
+refuses to continue if the socket never appeared:
+
+```sh
+tools/browser-bridge/start.sh                      # yubikey-5c-nfc-5.8, PIN 123456
+tools/browser-bridge/start.sh google-titan-v2      # another identity
+```
+
+It prints the profile, the attestation subject and the bridge URL, and appends to
+`/tmp/bridge.log` so a restart keeps the previous ceremony.
+
+By hand, for reference:
 
 **1. The daemon, socket transport** (no HID device, so no entitlement needed;
 `--testing` auto-approves the presence panel and exists only in Debug builds):
@@ -140,6 +151,7 @@ twice: as an `[bridge] ERROR …` line in its terminal, and as
 | `CTAP 0x19 (CREDENTIAL_EXCLUDED)` | this key already registered for that account; the site is refusing a duplicate. |
 | `CTAP 0x27 (OPERATION_DENIED)` | presence was declined — remove `--testing` and click the panel. |
 | `bridge unreachable at http://localhost:3000` | the bridge is not running, or is on another origin than the page's CSP allows. |
+| `no daemon socket at /tmp/swpk.sock` | the daemon is not running or was started without `SWPASSKEY_HID_SOCKET`; `start.sh` avoids this. |
 
 Start clean, which removes the PIN and duplicate-credential cases in one move:
 

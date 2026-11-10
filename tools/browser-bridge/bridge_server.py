@@ -70,8 +70,17 @@ def ctap_message(exc) -> str:
 # ----------------------------------------------------------------- CTAP plumbing
 class SockConnection(CtapHidConnection):
     def __init__(self, path: str) -> None:
+        if not Path(path).exists():
+            raise DaemonUnavailable(
+                f"no daemon socket at {path}. Start swpasskeyd with "
+                f"SWPASSKEY_HID_SOCKET={path} (tools/browser-bridge/start.sh does both), "
+                f"or pass --hid-socket with the socket it is using."
+            )
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(path)
+        try:
+            self.sock.connect(path)
+        except OSError as exc:
+            raise DaemonUnavailable(f"cannot connect to {path}: {exc}") from exc
         self.sock.settimeout(30.0)
 
     def read_packet(self) -> bytes:
@@ -88,6 +97,10 @@ class SockConnection(CtapHidConnection):
 
     def close(self) -> None:
         self.sock.close()
+
+
+class DaemonUnavailable(RuntimeError):
+    """The CTAP socket is missing or refusing connections."""
 
 
 class Pin:
@@ -226,7 +239,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, (HERE / "bridge.js").read_bytes(), "text/javascript; charset=utf-8")
             return
         if self.path == "/health":
-            self._json(200, {"ok": True, "hid_socket": self.hid_socket})
+            self._json(200, {
+                "ok": Path(self.hid_socket).exists(),
+                "hid_socket": self.hid_socket,
+                "hint": "" if Path(self.hid_socket).exists()
+                        else "start swpasskeyd with SWPASSKEY_HID_SOCKET pointing here",
+            })
             return
         self._json(404, {"ok": False, "error": "not found"})
 
@@ -254,6 +272,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, self.get_assertion(body))
             else:
                 self._json(404, {"ok": False, "error": "not found"})
+        except DaemonUnavailable as exc:
+            print(f"[bridge] ERROR {self.path}: {exc}", file=sys.stderr)
+            self._json(503, {"ok": False, "error": str(exc)})
         except CtapError as exc:
             # The daemon's status byte is the useful part; name it.
             message = ctap_message(exc)
