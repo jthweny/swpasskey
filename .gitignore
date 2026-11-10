@@ -32,3 +32,6 @@ diagnostics.json
 
 # Build output
 dist/
+
+# Python venv for the dev/e2e blocks
+.venv/

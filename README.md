@@ -4,7 +4,8 @@
 > (AAGUID + USB strings), packed **attestation with an `x5c` certificate**, a
 > per-registration diagnostics export and a local WebAuthn probe, to study how a
 > relying party decides whether a key is "hardware". See
-> [`docs/COMPAT.md`](docs/COMPAT.md). The certificate is self-signed: it names the
+> [`docs/COMPAT.md`](docs/COMPAT.md); copy-paste commands are in
+> [`RUN.md`](RUN.md). The certificate is self-signed: it names the
 > modelled vendor but does not chain to their root, and this is still software
 > with a daemon-side approval prompt, not a certified key.
 
